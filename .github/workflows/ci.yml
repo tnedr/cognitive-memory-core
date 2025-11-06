@@ -75,7 +75,8 @@ jobs:
 
   e2e:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Run on all PRs and main branch pushes
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     steps:
     - uses: actions/checkout@v4
 
@@ -97,7 +98,10 @@ jobs:
       run: |
         cd docker
         docker-compose up -d
-        sleep 15
+        # Wait for services to be ready (increased from 15 to 20 seconds)
+        sleep 20
+        # Additional health check
+        timeout 60 bash -c 'until docker-compose ps | grep -q "Up (healthy)"; do sleep 2; done' || true
 
     - name: Run E2E tests
       run: |

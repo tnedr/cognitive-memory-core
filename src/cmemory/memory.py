@@ -6,6 +6,7 @@ from typing import Dict, List, Optional
 
 from cmemory.graph import GraphStorage
 from cmemory.models import GraphNode, GraphRelationship, KnowledgeBlock, SearchResult
+from cmemory.reflection import Reflector
 from cmemory.storage import FileStorage
 from cmemory.vector import VectorIndex
 
@@ -22,6 +23,7 @@ class MemorySystem:
         neo4j_user: Optional[str] = None,
         neo4j_password: Optional[str] = None,
         use_chroma: bool = True,
+        llm=None,
     ):
         """Initialize the memory system.
 
@@ -31,6 +33,7 @@ class MemorySystem:
             neo4j_user: Neo4j username.
             neo4j_password: Neo4j password.
             use_chroma: Use ChromaDB for vector storage.
+            llm: Optional LangChain chat model for reflection.
         """
         self.file_storage = FileStorage(base_path=knowledge_path)
         self.graph_storage = GraphStorage(
@@ -39,6 +42,7 @@ class MemorySystem:
             password=neo4j_password,
         )
         self.vector_index = VectorIndex(use_chroma=use_chroma)
+        self.reflector = Reflector(llm=llm) if llm else None
 
     def record(self, raw_text: str, meta: Dict) -> str:
         """Record a new knowledge block from raw text.
@@ -156,12 +160,45 @@ class MemorySystem:
 
         # Find related blocks
         related = self.graph_storage.find_related(block_id, max_depth=2)
-        logger.info(f"Reflected on {block_id}, found {len(related)} related blocks")
+        related_ids = [r[1] for r in related] if related else []
 
-        # In a full implementation, this would use an LLM to generate insights
-        # For now, we just log the reflection
-        if related:
-            related_ids = [r[1] for r in related]
+        # Collect blocks for reflection
+        blocks_to_reflect = [block]
+        for related_id in related_ids[:5]:  # Limit to top 5 related blocks
+            related_block = self.file_storage.read(related_id)
+            if related_block:
+                blocks_to_reflect.append(related_block)
+
+        # Use Reflector if available
+        if self.reflector:
+            try:
+                relationships = self.reflector.reflect(blocks_to_reflect)
+                # Add suggested relationships to graph
+                for rel in relationships:
+                    try:
+                        self.graph_storage.add_node(
+                            GraphNode(
+                                id=rel.source_id,
+                                label="KnowledgeBlock",
+                                properties={},
+                            )
+                        )
+                        self.graph_storage.add_node(
+                            GraphNode(
+                                id=rel.target_id,
+                                label="KnowledgeBlock",
+                                properties={},
+                            )
+                        )
+                        self.graph_storage.add_relationship(rel)
+                        logger.info(f"Added relationship from reflection: {rel.source_id} --[{rel.relationship_type}]--> {rel.target_id}")
+                    except Exception as e:
+                        logger.warning(f"Failed to add reflection relationship: {e}")
+            except Exception as e:
+                logger.error(f"Reflection failed: {e}")
+
+        logger.info(f"Reflected on {block_id}, found {len(related)} related blocks")
+        if related_ids:
             logger.info(f"Related blocks: {related_ids}")
 
     def compress(self, block_ids: List[str]) -> str:
