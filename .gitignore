@@ -64,3 +64,6 @@ knowledge/*.json
 !knowledge/*-example.md
 !knowledge/2025-11-06-memory-design.md
 
+# Temp files
+_temp_*/
+
