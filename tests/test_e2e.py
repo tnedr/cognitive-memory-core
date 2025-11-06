@@ -1,6 +1,13 @@
 """End-to-end integration tests for cognitive-memory-core.
 
 These tests require Docker Compose services (Neo4j and ChromaDB) to be running.
+
+To run these tests:
+    docker-compose -f docker/docker-compose.yml up -d
+    pytest tests/test_e2e.py -v -m e2e
+
+Or skip Docker tests:
+    SKIP_DOCKER_TESTS=1 pytest tests/test_e2e.py
 """
 
 import os
@@ -222,4 +229,3 @@ def test_docker_services_available(docker_compose_up: None):
         assert response.status_code == 200
     except Exception:
         pytest.skip("ChromaDB not available")
-
