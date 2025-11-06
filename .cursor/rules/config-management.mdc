@@ -1,0 +1,151 @@
+# Configuration Management Rules
+
+## 🎯 Configuration System Overview
+
+The cursor agent management system uses a **simple, single-file configuration approach** with environment variable override support.
+
+## 📁 Configuration File
+
+**Location**: `python-packages/cursor_agent_management/src/cursor_agent_management/config.py`
+
+**Purpose**: Manages where JSON files (tasks.json, workers.json, etc.) are stored.
+
+## 🔧 Configuration Methods
+
+### **1. Default Configuration (Automatic)**
+```python
+# Uses _AGENT_WORKSPACE directory by default
+# No configuration needed - works out of the box
+```
+
+### **2. Environment Variable Override**
+```bash
+# Windows
+set CURSOR_AGENT_WORKING_DIR=E:\MyProject\agent_data
+
+# Linux/Mac
+export CURSOR_AGENT_WORKING_DIR=/path/to/agent/data
+```
+
+## 📊 Configuration Priority
+
+1. **Environment Variable** `CURSOR_AGENT_WORKING_DIR` (highest priority)
+2. **Default Path** `_AGENT_WORKSPACE` (lowest priority)
+
+## 🚀 Usage Examples
+
+### **Default Usage (No Configuration)**
+```python
+from cursor_agent_management.config import config
+
+# Automatically uses _AGENT_WORKSPACE directory
+print(f"Working directory: {config.working_dir}")
+print(f"Tasks file: {config.tasks_path}")
+```
+
+### **Environment Variable Override**
+```bash
+# Set environment variable
+export CURSOR_AGENT_WORKING_DIR=/custom/path/to/agent/data
+
+# Run task management
+python src/cursor_agent_management/task_management.py list
+```
+
+### **Programmatic Configuration Check**
+```python
+from cursor_agent_management.config import config
+
+# Check current configuration
+print(f"Working directory: {config.working_dir}")
+print(f"Tasks file: {config.tasks_path}")
+print(f"Workers file: {config.workers_path}")
+print(f"Activity log: {config.activity_log_path}")
+```
+
+## 📂 File Structure
+
+The system creates these files in the configured directory:
+
+```
+_AGENT_WORKSPACE/  (or your configured directory)
+├── tasks.json           # Task states and data
+├── workers.json         # Agent tracking and status
+├── activity_log.csv     # Complete activity audit trail
+└── task_management.lock # File locking for concurrency
+```
+
+## 🎯 Best Practices
+
+### **DO:**
+- Use environment variables for different environments (dev, staging, prod)
+- Keep configuration simple - avoid complex YAML files
+- Use absolute paths for clarity
+- Test configuration in different environments
+
+### **DON'T:**
+- Don't hardcode paths in code
+- Don't create multiple configuration files
+- Don't use complex configuration formats (YAML, JSON) for simple settings
+- Don't modify config.py directly - use environment variables
+
+## 🔍 Troubleshooting
+
+### **Configuration Not Working**
+```bash
+# Check if environment variable is set
+echo $CURSOR_AGENT_WORKING_DIR
+
+# Check if directory exists and is writable
+ls -la $CURSOR_AGENT_WORKING_DIR
+```
+
+### **Path Issues**
+```python
+# Check configuration programmatically
+from cursor_agent_management.config import config
+print(f"Working dir exists: {config.working_dir.exists()}")
+print(f"Working dir writable: {config.working_dir.is_dir()}")
+```
+
+### **Default Configuration**
+```python
+# If environment variable is not set, uses default
+from cursor_agent_management.config import config
+print(f"Using default path: {config.working_dir}")
+```
+
+## 🚨 Important Notes
+
+- **Single Source of Truth**: Only `config.py` manages configuration
+- **Environment Variable Priority**: Always overrides default values
+- **Automatic Directory Creation**: Working directory is created automatically
+- **No External Dependencies**: No YAML, no complex parsing
+- **Cross-Platform**: Works on Windows, Linux, and Mac
+
+## 📝 Development Guidelines
+
+When working with the configuration system:
+
+1. **Always use the config object** - don't hardcode paths
+2. **Test with environment variables** - ensure override works
+3. **Check directory permissions** - ensure writable access
+4. **Use absolute paths** - avoid relative path confusion
+5. **Document environment setup** - for team members
+
+## 🔄 Migration Notes
+
+If you need to change the working directory:
+
+1. **Set environment variable**: `export CURSOR_AGENT_WORKING_DIR=/new/path`
+2. **Move existing files**: Copy JSON files to new location
+3. **Test configuration**: Verify all files are accessible
+4. **Update documentation**: Inform team of new path
+
+## 🎉 Benefits
+
+- **Simple**: One file, one way to configure
+- **Flexible**: Environment variable override
+- **Reliable**: No complex parsing or external dependencies
+- **Maintainable**: Easy to understand and modify
+- **Standard**: Follows industry best practices

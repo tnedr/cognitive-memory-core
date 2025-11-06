@@ -1,0 +1,134 @@
+---
+alwaysApply: true
+---
+
+# PowerShell and Windows Terminal Guidelines
+
+## 🖥️ PowerShell Command Best Practices
+
+### ✅ Reliable PowerShell Commands
+```powershell
+# Get current directory - ALWAYS use these
+echo (Get-Location).Path
+Write-Host (Get-Location).Path
+(Get-Location).Path
+
+# List directory contents
+Get-ChildItem
+ls  # alias that usually works
+
+# Check PowerShell version
+$PSVersionTable
+```
+
+### ❌ Avoid These Commands (Unreliable on Windows)
+```powershell
+# These often don't show output properly
+Get-Location  # raw object
+pwd           # Unix command, not always available
+cd            # shows nothing
+$PWD          # sometimes doesn't work
+```
+
+## 🔧 Windows Terminal Configuration
+
+### PowerShell Output Issues
+- **Problem**: `Get-Location` returns objects, not strings
+- **Solution**: Always use `.Path` property or `Write-Host`
+- **Why**: Windows terminals sometimes don't render PowerShell objects properly
+
+### Terminal Encoding
+- **File Encoding**: UTF-8 without BOM
+- **Output Encoding**: Use `Write-Host` for reliable display
+- **Cross-platform**: Test commands on Windows terminal
+
+## 📝 Code Examples
+
+### ✅ Good PowerShell Patterns
+```powershell
+# Directory operations
+echo (Get-Location).Path
+Write-Host "Current directory: $((Get-Location).Path)"
+
+# File operations
+Get-ChildItem -Name
+Get-ChildItem | Select-Object Name, Length
+
+# Environment checks
+$PSVersionTable.PSVersion
+$env:OS
+```
+
+### ❌ Problematic Patterns
+```powershell
+# These may not show output
+Get-Location
+pwd
+cd
+$PWD
+```
+
+## 🎯 Project-Specific Rules
+
+### Terminal Commands
+- Use `echo (Get-Location).Path` instead of `Get-Location`
+- Use `Write-Host` for important output
+- Test commands in Windows PowerShell Core
+- Avoid Unix commands that may not be available
+
+### File Operations
+- Use `Get-ChildItem` instead of `ls` when possible
+- Use `Test-Path` to check file existence
+- Use `Get-Content` for reading files
+
+### Error Handling
+```powershell
+# Good error handling
+try {
+    $result = (Get-Location).Path
+    Write-Host "Success: $result"
+} catch {
+    Write-Host "Error: $($_.Exception.Message)"
+}
+```
+
+## 🚀 Implementation Guidelines
+
+### When Writing PowerShell Commands
+1. **Always use `.Path` property** for directory paths
+2. **Use `Write-Host`** for important output
+3. **Test on Windows terminal** before assuming it works
+4. **Avoid raw object returns** - extract properties
+
+### When Debugging Terminal Issues
+1. Try `echo (Get-Location).Path` first
+2. Use `Write-Host` for debugging output
+3. Check `$PSVersionTable` for PowerShell version
+4. Test with simple commands first
+
+## 🔍 Testing Checklist
+
+### Before Using PowerShell Commands
+- [ ] Test with `echo (Get-Location).Path`
+- [ ] Verify output is visible
+- [ ] Check PowerShell version compatibility
+- [ ] Test on Windows terminal
+
+### Common Issues
+- **No output**: Use `Write-Host` instead of object returns
+- **Encoding issues**: Use ASCII-safe characters
+- **Version conflicts**: Check PowerShell Core vs Windows PowerShell
+
+## 📋 Quick Reference
+
+### ✅ DO:
+- Use `echo (Get-Location).Path` for directory
+- Use `Write-Host` for important output
+- Test commands on Windows terminal
+- Use `.Path` property for paths
+
+### ❌ DON'T:
+- Use raw `Get-Location` (returns object)
+- Use Unix commands like `pwd`
+- Assume output will be visible
+- Use Unicode in terminal output

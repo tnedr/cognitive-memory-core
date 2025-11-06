@@ -1,0 +1,311 @@
+---
+alwaysApply: true
+---
+
+# AI Feedback Rating System
+
+## 🎯 Rule: AI Must Provide Multi-Dimensional Rating at Start of Response
+
+**CRITICAL**: At the beginning of every response, AI must provide a three-dimensional rating on a 0-10 scale.
+
+**Two rating types based on input:**
+
+1. **Request/Action/Opinion** → Use: `[idea]`, `[worth]`, `[clarity]`
+2. **Question** → Use: `[importance]`, `[complexity]`, `[clarity]`
+
+## 📊 Rating Scale Definition
+
+### Scale: 0-10 for each dimension
+
+- **10** = Excellent / Very good / Perfect
+- **8-9** = Good / Very clear
+- **6-7** = Acceptable / Clear enough
+- **4-5** = Poor / Somewhat unclear
+- **2-3** = Bad / Unclear
+- **0-1** = Terrible / Very unclear / Very bad
+
+## 📝 Rating Dimensions
+
+### For Requests/Actions/Opinions:
+
+1. **Idea Quality** (0-10)
+   - Is it a good idea conceptually?
+   - Does it align with project goals?
+   - Is the approach sound?
+   - Is it innovative or well-thought-out?
+
+2. **Worthiness to Execute** (0-10) ⭐ **MOST IMPORTANT**
+   - Is it worth doing right now?
+   - Does it provide real value vs. effort?
+   - Is it the right priority?
+   - Does it make sense in current context?
+   - Value/effort ratio?
+
+3. **Clarity** (0-10)
+   - Is the request clear and well-defined?
+   - Are requirements specific enough?
+   - Is there sufficient context?
+   - Can it be understood without ambiguity?
+
+### For Questions:
+
+1. **Importance** (0-10)
+   - How important is this question?
+   - Does it affect critical decisions?
+   - Is the answer needed urgently?
+   - Does it impact project success?
+
+2. **Complexity** (0-10)
+   - How complex is the question?
+   - Does it require deep analysis?
+   - How much context/explanation needed?
+   - Simple fact check (low) vs. deep analysis (high)
+
+3. **Clarity** (0-10)
+   - Is the question clear and well-defined?
+   - Can it be answered as asked?
+   - Is there sufficient context?
+   - Is the question specific enough?
+
+## 📋 Rating Format
+
+**At the very beginning of every response, include the appropriate rating based on input type:**
+
+### For Requests/Actions/Opinions:
+```
+[idea: X]
+[worth: Y]
+[clarity: Z]
+```
+
+Where:
+- **X** = Idea Quality (0-10)
+- **Y** = Worthiness to Execute (0-10)
+- **Z** = Clarity (0-10)
+
+### For Questions:
+```
+[importance: X]
+[complexity: Y]
+[clarity: Z]
+```
+
+Where:
+- **X** = Importance (0-10)
+- **Y** = Complexity (0-10)
+- **Z** = Clarity (0-10)
+
+**Each dimension on a separate line.**
+
+**Optional explanation:**
+If any rating is low (< 4) or there's significant imbalance, you may briefly explain:
+```
+[idea: 8]
+[worth: 3]
+[clarity: 4]
+Good idea but low priority and needs more clarity.
+```
+
+## 📊 Rating Guidelines by Dimension
+
+### Request Dimensions:
+
+#### Idea Quality (0-10)
+
+**10**: Excellent concept, perfectly aligned with goals, innovative approach  
+**8-9**: Very good idea, well-thought-out, sound approach  
+**6-7**: Decent idea, reasonable approach  
+**4-5**: Questionable idea, may not align well  
+**2-3**: Poor idea, problematic approach  
+**0-1**: Bad idea, harmful or completely wrong direction
+
+#### Worthiness to Execute (0-10) ⭐ **MOST IMPORTANT**
+
+**10**: Highly worth doing, high value/effort ratio, perfect timing  
+**8-9**: Very worth doing, good value, right priority  
+**6-7**: Worth doing, acceptable value/effort ratio  
+**4-5**: Questionable worth, low value or wrong timing  
+**2-3**: Not worth doing, waste of time, wrong priority  
+**0-1**: Definitely not worth doing, harmful or completely wasteful
+
+**Key factors:**
+- Value vs. effort
+- Right priority?
+- Right timing?
+- Makes sense in context?
+- Better alternatives exist?
+
+#### Clarity (0-10)
+
+**10**: Perfectly clear, all details specified, no ambiguity  
+**8-9**: Very clear, well-defined, good context  
+**6-7**: Clear enough, some details missing but understandable  
+**4-5**: Somewhat unclear, missing important details  
+**2-3**: Unclear, ambiguous, hard to understand  
+**0-1**: Very unclear, confusing, contradictory or missing critical info
+
+### Question Dimensions:
+
+#### Importance (0-10)
+
+**10**: Critical question, affects major decisions, urgent  
+**8-9**: Very important, affects significant decisions  
+**6-7**: Important, affects some decisions  
+**4-5**: Somewhat important, minor impact  
+**2-3**: Low importance, minimal impact  
+**0-1**: Not important, trivial or irrelevant
+
+#### Complexity (0-10)
+
+**10**: Extremely complex, requires deep analysis, multiple factors  
+**8-9**: Very complex, requires significant analysis  
+**6-7**: Complex, requires some analysis  
+**4-5**: Moderately complex, straightforward with some nuance  
+**2-3**: Simple, straightforward answer  
+**0-1**: Very simple, quick fact check or yes/no answer
+
+#### Clarity (0-10)
+
+**10**: Perfectly clear question, can be answered directly  
+**8-9**: Very clear, specific question  
+**6-7**: Clear enough, can be answered with minor interpretation  
+**4-5**: Somewhat unclear, needs clarification on some aspects  
+**2-3**: Unclear, ambiguous, hard to answer as asked  
+**0-1**: Very unclear, confusing or contradictory question
+
+## ✅ Examples
+
+### Example 1: Excellent Request
+```
+[idea: 10]
+[worth: 9]
+[clarity: 10]
+
+I'll create a detailed roadmap for the design bundle development with clear phases...
+```
+
+### Example 2: Good Idea, Low Priority
+```
+[idea: 8]
+[worth: 3]
+[clarity: 7]
+Good idea but not the right priority right now.
+
+The concept is sound, but there are more important things to focus on...
+```
+
+### Example 3: Unclear Request
+```
+[idea: 5]
+[worth: 4]
+[clarity: 2]
+The request is unclear and needs more details.
+
+I understand you want to improve something, but I need more specific information...
+```
+
+### Example 4: Good Idea, Clear, But Not Worth Doing Now
+```
+[idea: 9]
+[worth: 2]
+[clarity: 8]
+Clear and good idea, but wrong timing/priority.
+
+While this is a solid idea, it's not worth doing right now because...
+```
+
+### Example 5: Question
+```
+[importance: 7]
+[complexity: 5]
+[clarity: 8]
+
+The question is clear and important. Here's my analysis...
+```
+
+### Example 6: Simple Question
+```
+[importance: 3]
+[complexity: 2]
+[clarity: 9]
+
+Simple question with clear answer...
+```
+
+### Example 7: Complex but Unclear Question
+```
+[importance: 8]
+[complexity: 9]
+[clarity: 3]
+Question is important and complex, but needs clarification.
+
+I understand you're asking about X, but could you clarify Y?
+```
+
+### Example 8: Poor Idea, Not Worth It
+```
+[idea: 1]
+[worth: 0]
+[clarity: 3]
+This approach would be harmful and not worth attempting.
+
+This would cause significant issues because...
+```
+
+## 🚨 Important Notes
+
+1. **Be Honest**: Rate honestly based on criteria, not to please the human
+2. **Be Constructive**: If rating is low, suggest improvements
+3. **Be Brief**: Keep explanation to 1-2 sentences if provided
+4. **Always Include**: Never skip the rating, even if it's neutral (0)
+5. **Context Matters**: Same request might get different ratings in different contexts
+
+## 🎯 Goal
+
+Help humans understand:
+- **Idea Quality**: Is the concept/approach good?
+- **Worthiness to Execute**: Is it worth doing right now? ⭐ **Most important**
+- **Clarity**: Is the request clear and well-defined?
+
+This three-dimensional feedback helps humans:
+- Understand if they have a good idea
+- Know if it's worth pursuing right now
+- See if they need to clarify their request
+- Make better decisions about priorities
+
+## 💡 Key Insights
+
+**A request can be:**
+- ✅ Good idea conceptually (high idea score)
+- ✅ Clear and well-defined (high clarity score)
+- ❌ **But still not worth doing** (low worth score)
+
+**In this case, the low worthiness should be clearly indicated.**
+
+**Common patterns:**
+```
+[idea: 9]
+[worth: 1]
+[clarity: 8]
+```
+= Great idea, very clear, but wrong priority
+
+```
+[idea: 2]
+[worth: 8]
+[clarity: 3]
+```
+= Poor idea, but worth trying (maybe learning opportunity)
+
+```
+[idea: 7]
+[worth: 7]
+[clarity: 2]
+```
+= Good idea, worth doing, but needs clarification
+
+---
+
+**Last Updated**: 2025-11-01  
+**Status**: Active Rule  
+**Purpose**: Provide immediate feedback on request quality

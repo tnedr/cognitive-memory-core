@@ -1,0 +1,208 @@
+---
+alwaysApply: true
+---
+
+# Unicode and Encoding Guidelines
+
+## 🚫 AVOID Unicode Characters in Code
+- **NO emojis** in print statements, comments, or strings
+- **NO special Unicode characters** (arrows, symbols, etc.)
+- **NO non-ASCII characters** in code files
+
+## ✅ USE Plain Text Instead
+```python
+# ❌ BAD - causes UnicodeEncodeError on Windows
+print("🚀 Starting test...")
+print("✅ Success!")
+print("❌ Error!")
+
+# ✅ GOOD - Windows compatible
+print("Starting test...")
+print("Success!")
+print("Error!")
+```
+
+## 🔧 File Encoding Rules
+- **All files**: UTF-8 without BOM
+- **Python files**: ASCII-safe characters only
+- **Environment files**: ASCII-only content
+
+## 📝 Code Style for Windows Compatibility
+```python
+# Status messages
+print("INFO: Operation started")
+print("SUCCESS: Operation completed")
+print("ERROR: Operation failed")
+
+# Progress indicators
+print("Loading...")
+print("Processing...")
+print("Done!")
+```
+
+## 🎯 Project-Specific Rules
+
+### Python Code
+- Use `print()` with plain ASCII text only
+- Avoid Unicode in error messages
+- Use standard ASCII punctuation: `!`, `?`, `.`, `:`
+
+### Environment Files
+- `.env` files must be ASCII-only
+- No Unicode in variable names or values
+- Use standard ASCII characters only
+
+### Documentation
+- Markdown files can use Unicode (emojis OK in docs)
+- Code examples must be ASCII-safe
+- Comments in code must be ASCII-only
+
+## 🚨 Common Unicode Issues to Avoid
+- Emojis: 🚀 ✅ ❌ 📋 💡 🎉 📝 💥 🤖
+- Special arrows: → ← ↑ ↓
+- Special symbols: ★ ☆ ◆ ◇ ● ○
+- Accented characters: é, ñ, ü, etc.
+- Check marks and X marks: ✓ ✗ ✘ ✔
+- Unicode symbols: \u2713 (✓), \u2717 (✗), \u2718 (✘)
+- Rocket emoji: \U0001f680 (🚀)
+- Other common emojis: \U0001f4dd (📝), \U0001f4e5 (📥)
+
+## ✅ Safe Alternatives
+```python
+# Instead of emojis, use:
+print("[INFO] Starting process...")
+print("[SUCCESS] Process completed")
+print("[ERROR] Process failed")
+print("[WARNING] Check configuration")
+
+# Or use simple ASCII symbols:
+print("> Starting...")
+print("+ Success!")
+print("- Error!")
+print("* Warning!")
+```
+
+## 🚨 Specific Issues Encountered
+
+### Windows Terminal Unicode Errors
+```python
+# ❌ BAD - Causes UnicodeEncodeError on Windows
+print("🚀 Starting demo...")
+print("✅ Success!")
+print("✓ Check passed")
+print("✗ Check failed")
+
+# ✅ GOOD - Windows compatible
+print("Starting demo...")
+print("SUCCESS: Success!")
+print("+ Check passed")
+print("- Check failed")
+```
+
+### Common Error Patterns
+```python
+# ❌ These cause 'charmap' codec errors:
+print("🚀 MASTER TEST RUNNER")
+print("📋 STEP 1: Running Demo")
+print("🤖 STEP 2: AI Analysis")
+print("📊 STEP 3: Summary Report")
+
+# ✅ Use ASCII alternatives:
+print("MASTER TEST RUNNER")
+print("STEP 1: Running Demo")
+print("STEP 2: AI Analysis")
+print("STEP 3: Summary Report")
+```
+
+### Unicode in String Literals
+```python
+# ❌ BAD - Unicode in f-strings
+print(f"  ✓ {strength}")
+print(f"  ✗ {issue}")
+
+# ✅ GOOD - ASCII alternatives
+print(f"  + {strength}")
+print(f"  - {issue}")
+```
+
+## 🔍 Testing Guidelines
+- All test output must be ASCII-safe
+- Integration tests should work on Windows terminals
+- No Unicode characters in assert messages
+- Use plain text for all user-facing output
+
+## 🎯 Demo Execution Unicode Rules
+
+### Demo Scripts Must Be ASCII-Safe
+```python
+# ❌ BAD - Will cause UnicodeEncodeError
+print("🚀 Starting end-to-end demo pipeline...")
+print("✅ Fetched scene from orchestrator API")
+print("📝 Using local scene builder")
+print("🎨 Rendering scene to PNG...")
+print("✅ Rendered full_pipeline.png")
+
+# ✅ GOOD - ASCII-safe output
+print("Starting end-to-end demo pipeline...")
+print("SUCCESS: Fetched scene from orchestrator API")
+print("INFO: Using local scene builder")
+print("Rendering scene to PNG...")
+print("SUCCESS: Rendered full_pipeline.png")
+```
+
+### AI Analysis Output
+```python
+# ❌ BAD - Unicode symbols in analysis
+print(f"  ✓ {strength}")
+print(f"  ✗ {issue}")
+print("🎉 ALL TESTS PASSED!")
+print("⚠️  SOME TESTS FAILED!")
+
+# ✅ GOOD - ASCII alternatives
+print(f"  + {strength}")
+print(f"  - {issue}")
+print("SUCCESS: ALL TESTS PASSED!")
+print("WARNING: SOME TESTS FAILED!")
+```
+
+### Master Test Runner
+```python
+# ❌ BAD - Unicode in master runner
+print("🚀 MASTER TEST RUNNER - Complete Demo Testing Pipeline")
+print("📋 STEP 1: Running Demo Executor")
+print("🤖 STEP 2: Running AI Analyzer")
+print("📊 STEP 3: Generating Summary Report")
+
+# ✅ GOOD - ASCII alternatives
+print("MASTER TEST RUNNER - Complete Demo Testing Pipeline")
+print("STEP 1: Running Demo Executor")
+print("STEP 2: Running AI Analyzer")
+print("STEP 3: Generating Summary Report")
+```
+
+## 📁 File Structure Rules
+- All Python files: ASCII-only content
+- All configuration files: ASCII-only
+- Documentation files: Unicode OK (markdown, etc.)
+- Environment files: ASCII-only
+
+## 🎯 Quick Reference
+
+### ✅ DO:
+- Use plain ASCII text in all code
+- Use standard punctuation: `!`, `?`, `.`, `:`
+- Use simple status indicators: `[INFO]`, `[SUCCESS]`, `[ERROR]`
+- Keep all Python code Windows-terminal compatible
+
+### ❌ DON'T:
+- Use emojis in Python code
+- Use Unicode symbols in print statements
+- Use special Unicode characters
+- Assume terminal Unicode support
+
+## 🚀 Implementation
+When creating new files or modifying existing ones:
+1. Check for Unicode characters
+2. Replace with ASCII alternatives
+3. Test on Windows terminal
+4. Ensure cross-platform compatibility
