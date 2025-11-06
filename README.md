@@ -32,6 +32,7 @@ graph TB
 ### Prerequisites
 
 - Python 3.10+
+- [UV](https://github.com/astral-sh/uv) package manager
 - Docker and Docker Compose (for Neo4j and ChromaDB services)
 
 ### Setup
@@ -42,10 +43,16 @@ git clone https://github.com/tnedr/cognitive-memory-core.git
 cd cognitive-memory-core
 ```
 
-2. Install dependencies:
+2. Create virtual environment and install dependencies:
 ```bash
-pip install -r requirements.txt
+# Create minimal venv (UV handles the rest)
+python -m venv .venv --symlinks
+
+# Install dependencies using UV (uses global cache at E:\uv-cache)
+uv pip install -e .
 ```
+
+**Note**: This project uses UV cache for efficient package management. The global cache location is configured via `UV_CACHE_DIR` environment variable (default: `E:\uv-cache`). This allows fast installs and minimal disk usage per project.
 
 3. Start services (optional, for full functionality):
 ```bash
@@ -64,31 +71,36 @@ This will start:
 #### Ingest a knowledge block
 
 ```bash
+# Using UV (recommended)
+uv run python -m src.cli ingest knowledge/2025-11-06-memory-design.md
+
+# Or activate venv first
+.venv\Scripts\activate  # Windows
 python -m src.cli ingest knowledge/2025-11-06-memory-design.md
 ```
 
 #### Auto-link related blocks
 
 ```bash
-python -m src.cli autolink KB-20251106-001
+uv run python -m src.cli autolink KB-20251106-001
 ```
 
 #### Materialize context for a goal
 
 ```bash
-python -m src.cli context "Explain hybrid memory architecture"
+uv run python -m src.cli context "Explain hybrid memory architecture"
 ```
 
 #### Search for knowledge blocks
 
 ```bash
-python -m src.cli search "memory system" --top-k 5
+uv run python -m src.cli search "memory system" --top-k 5
 ```
 
 #### List all blocks
 
 ```bash
-python -m src.cli list-blocks
+uv run python -m src.cli list-blocks
 ```
 
 ### Python API
@@ -142,9 +154,39 @@ The actual knowledge content goes here...
 
 ## Development
 
+### UV Cache Workflow
+
+This project uses UV for efficient package management with a global cache:
+
+- **Global cache**: `E:\uv-cache` (configured via `UV_CACHE_DIR`)
+- **Project venv**: Minimal, mostly symlinks (`.venv/`)
+- **Dependencies**: Stored in global cache, shared across projects
+
+**Benefits**:
+- Fast installs from cache (10x faster for cached packages)
+- Minimal disk usage per project (80-90% reduction)
+- Consistent packages across projects
+
+**Workflow**:
+```bash
+# Install/update dependencies (uses cache automatically)
+uv pip install -e .
+
+# Run commands
+uv run python -m src.cli --help
+uv run pytest tests/
+
+# Check cache location
+uv cache dir
+```
+
 ### Running Tests
 
 ```bash
+# Using UV (recommended)
+uv run pytest tests/ --cov=src/cmemory --cov-report=html
+
+# Or with activated venv
 pytest tests/ --cov=src/cmemory --cov-report=html
 ```
 
