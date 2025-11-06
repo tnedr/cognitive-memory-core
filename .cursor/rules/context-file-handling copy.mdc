@@ -1,0 +1,43 @@
+# Context File Handling Rules
+
+## 🚨 CRITICAL RULE: z_CONTEXT.md Kezelés
+
+### **ALAPVETŐ SZABÁLY:**
+
+**NE ÍRJ A z_CONTEXT.md FÁJLBA, KIVÉVE HA EXPLICIT MÓDON KÉRIK!**
+
+### **Szabályok:**
+
+1. **Csak akkor írj a z_CONTEXT.md-ba, amikor:**
+   - ✅ Human **explicit módon kéri**: "írj bele", "add hozzá", "frissítsd"
+   - ✅ Human **direkt parancsot ad**: "írd bele hogy..."
+
+2. **NE írj a z_CONTEXT.md-ba, ha:**
+   - ❌ Human csak beszélget, véleményt nyilvánít
+   - ❌ Human problémát ír le, de nem kéri hogy dokumentáld
+   - ❌ Human kérdést tesz fel
+   - ❌ Human elemzést kér, de nem dokumentálást
+
+### **Példák:**
+
+**✅ DO - Írhatsz:**
+```
+User: "írd bele a z_CONTEXT.md-ba hogy..."
+User: "add hozzá a kontexthez..."
+User: "frissítsd a z_CONTEXT.md fájlt..."
+User: "dokumentáld ezt a z_CONTEXT.md-ben..."
+```
+
+**❌ DON'T - Ne írj:**
+```
+User: "nézd meg ezt a bundle-t..."
+User: "mi a probléma itt?"
+User: "hogyan lehet ezt megoldani?"
+User: "beszéljük meg..."
+```
+
+### **Kivétel:**
+- Ha Human először kéri hogy "írd bele", majd később folytatja a témát, akkor **csak az első alkalommal írj**.
+
+### **Jelenlegi z_CONTEXT.md Tartalom:**
+A fájl alapértelmezés szerint csak a Human által explicit módon írt tartalmat tartalmazza.
