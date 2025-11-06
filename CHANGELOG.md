@@ -7,18 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.2.0-UNRELEASED]
 
-### Planned
-- End-to-end integration tests with Docker Compose fixtures
-- Real LLM-based `reflect()` implementation with LangChain
-- Token-aware `compress()` with RAG summarization
-- Decay policy with `last_access` tracking and archival
-- File watcher for auto re-encode on changes
-- REST/GraphQL API with FastAPI
-- CI/CD pipeline with GitHub Actions
-- Front-end UI (optional)
+### Added
+- LLM-based reflection with `Reflector` class
+  - LangChain integration for insight generation
+  - Jinja2 prompt templates (`templates/reflect.jinja`)
+  - Automatic relationship suggestion from LLM analysis
+  - Async reflection support
+- End-to-end integration tests (`tests/test_e2e.py`)
+- CI/CD improvements:
+  - E2E tests run on all PRs (not just main branch)
+  - Improved Docker health checks
+  - Increased service startup wait time
 
 ### In Progress
-- End-to-end smoke tests (`tests/test_e2e.py`)
+- Token-aware `compress()` with RAG summarization
+- Decay policy with `last_access` tracking
+- File watcher for auto re-encode
+
+### Planned
+- REST/GraphQL API with FastAPI
+- Front-end UI (optional)
 
 ## [0.1.0] - 2025-11-06
 
