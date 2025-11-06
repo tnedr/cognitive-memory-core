@@ -8,6 +8,12 @@ from cmemory.models import GraphRelationship, KnowledgeBlock
 
 logger = logging.getLogger(__name__)
 
+# Try to import Jinja2 Template
+try:
+    from jinja2 import Template
+except ImportError:
+    Template = None
+
 
 class Reflector:
     """Generates insights about knowledge blocks using LLM."""
