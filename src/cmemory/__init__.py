@@ -5,7 +5,7 @@ Combines file-based storage (Markdown/JSON), graph database (Neo4j),
 and vector search (ChromaDB/FAISS) for intelligent knowledge management.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 from cmemory.memory import MemorySystem
 
