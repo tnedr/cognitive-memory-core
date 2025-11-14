@@ -50,6 +50,7 @@ class MemorySystem:
         )
         self.vector_index = VectorIndex(use_chroma=use_chroma)
         self.reflector = Reflector(llm=llm) if llm else None
+        self.decay_manager = DecayManager(knowledge_path=knowledge_path)
 
     def record(self, raw_text: str, meta: Dict) -> str:
         """Record a new knowledge block from raw text.
@@ -70,13 +71,15 @@ class MemorySystem:
         tags = meta.get("tags", [])
         if isinstance(tags, str):
             tags = [tags]
+        information_type = meta.get("information_type")
 
         block = KnowledgeBlock(
             id=block_id,
             title=title,
             content=raw_text,
             tags=tags,
-            metadata={k: v for k, v in meta.items() if k not in ["id", "title", "tags"]},
+            information_type=information_type,
+            metadata={k: v for k, v in meta.items() if k not in ["id", "title", "tags", "information_type"]},
         )
         block.content_hash = self.file_storage._calculate_hash(raw_text)
 

@@ -83,6 +83,8 @@ class FileStorage:
             "created": block.created.isoformat(),
             "updated": block.updated.isoformat(),
         }
+        if block.information_type is not None:
+            frontmatter["information_type"] = block.information_type
         frontmatter.update(block.metadata)
 
         import yaml
@@ -149,7 +151,8 @@ class FileStorage:
         else:
             updated = datetime.now(timezone.utc)
 
-        metadata = {k: v for k, v in frontmatter.items() if k not in ["id", "title", "tags", "created", "updated"]}
+        information_type = frontmatter.get("information_type")
+        metadata = {k: v for k, v in frontmatter.items() if k not in ["id", "title", "tags", "created", "updated", "information_type"]}
 
         block = KnowledgeBlock(
             id=block_id,
@@ -159,6 +162,7 @@ class FileStorage:
             created=created,
             updated=updated,
             metadata=metadata,
+            information_type=information_type,
         )
         block.content_hash = self._calculate_hash(block.content)
         return block

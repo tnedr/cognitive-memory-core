@@ -17,6 +17,7 @@ class KnowledgeBlock:
     updated: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     metadata: Dict[str, Any] = field(default_factory=dict)
     content_hash: Optional[str] = None
+    information_type: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
@@ -29,6 +30,7 @@ class KnowledgeBlock:
             "updated": self.updated.isoformat(),
             "metadata": self.metadata,
             "content_hash": self.content_hash,
+            "information_type": self.information_type,
         }
 
     @classmethod
@@ -43,6 +45,7 @@ class KnowledgeBlock:
             updated=datetime.fromisoformat(data.get("updated", datetime.now(timezone.utc).isoformat())),
             metadata=data.get("metadata", {}),
             content_hash=data.get("content_hash"),
+            information_type=data.get("information_type"),
         )
 
 

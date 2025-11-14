@@ -33,8 +33,9 @@ def cli(ctx, knowledge_path, neo4j_uri, neo4j_user, neo4j_password):
 @click.argument("file", type=click.Path(exists=True))
 @click.option("--id", help="Custom block ID (auto-generated if not provided)")
 @click.option("--title", help="Block title (extracted from file if not provided)")
+@click.option("--information-type", help="Information type (static or dynamic)")
 @click.pass_context
-def ingest(ctx, file, id, title):
+def ingest(ctx, file, id, title, information_type):
     """Ingest a knowledge block from a Markdown file."""
     file_path = Path(file)
     content = file_path.read_text(encoding="utf-8")
@@ -50,7 +51,11 @@ def ingest(ctx, file, id, title):
         "title": title or frontmatter.get("title") or file_path.stem,
         "tags": frontmatter.get("tags", []),
     }
-    meta.update({k: v for k, v in frontmatter.items() if k not in ["id", "title", "tags"]})
+    if information_type:
+        meta["information_type"] = information_type
+    elif "information_type" in frontmatter:
+        meta["information_type"] = frontmatter.get("information_type")
+    meta.update({k: v for k, v in frontmatter.items() if k not in ["id", "title", "tags", "information_type"]})
 
     memory = ctx.obj["memory"]
     block_id = memory.record(body, meta)

@@ -71,3 +71,28 @@ def test_encode_block(temp_memory):
     encoded_id = temp_memory.encode(block_id)
     assert encoded_id == block_id
 
+
+def test_information_type_storage(temp_memory):
+    """Test storing and retrieving information_type."""
+    # Record with information_type
+    block_id = temp_memory.record(
+        "This is a dynamic knowledge block about code status.",
+        {"id": "KB-INFO-001", "title": "Code Status", "information_type": "dynamic"},
+    )
+
+    assert block_id == "KB-INFO-001"
+
+    # Retrieve the block and verify information_type
+    block = temp_memory.file_storage.read(block_id)
+    assert block is not None
+    assert block.information_type == "dynamic"
+
+    # Test retrieval includes information_type
+    results = temp_memory.retrieve("code status", top_k=1)
+    assert len(results) > 0
+    assert "KB-INFO-001" in results
+
+    # Verify block still has information_type after retrieval
+    retrieved_block = temp_memory.file_storage.read(block_id)
+    assert retrieved_block.information_type == "dynamic"
+
