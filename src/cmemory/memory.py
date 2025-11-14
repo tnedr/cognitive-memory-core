@@ -13,6 +13,7 @@ from cmemory.compress import Compressor
 from cmemory.decay import DecayManager
 from cmemory.graph import GraphStorage
 from cmemory.models import GraphNode, GraphRelationship, KnowledgeBlock, SearchResult
+from cmemory.reflection import Reflector
 from cmemory.storage import FileStorage
 from cmemory.vector import VectorIndex
 
