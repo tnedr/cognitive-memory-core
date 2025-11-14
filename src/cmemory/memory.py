@@ -4,8 +4,16 @@ import logging
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
+
+from cmemory.compress import Compressor
+from cmemory.decay import DecayManager
 from cmemory.graph import GraphStorage
 from cmemory.models import GraphNode, GraphRelationship, KnowledgeBlock, SearchResult
+from cmemory.reflection import Reflector
 from cmemory.storage import FileStorage
 from cmemory.vector import VectorIndex
 
@@ -22,6 +30,7 @@ class MemorySystem:
         neo4j_user: Optional[str] = None,
         neo4j_password: Optional[str] = None,
         use_chroma: bool = True,
+        llm=None,
     ):
         """Initialize the memory system.
 
@@ -31,6 +40,7 @@ class MemorySystem:
             neo4j_user: Neo4j username.
             neo4j_password: Neo4j password.
             use_chroma: Use ChromaDB for vector storage.
+            llm: Optional LangChain chat model for reflection.
         """
         self.file_storage = FileStorage(base_path=knowledge_path)
         self.graph_storage = GraphStorage(
@@ -39,6 +49,7 @@ class MemorySystem:
             password=neo4j_password,
         )
         self.vector_index = VectorIndex(use_chroma=use_chroma)
+        self.reflector = Reflector(llm=llm) if llm else None
 
     def record(self, raw_text: str, meta: Dict) -> str:
         """Record a new knowledge block from raw text.
@@ -71,6 +82,10 @@ class MemorySystem:
 
         self.file_storage.create(block, format="markdown")
         logger.info(f"Recorded knowledge block: {block_id}")
+
+        # Initialize access metadata
+        self.decay_manager._update_access_metadata(block)
+        self.file_storage.update(block)
 
         # Auto-encode and link
         self.encode(block_id)
@@ -142,7 +157,13 @@ class MemorySystem:
             List of block IDs ordered by relevance.
         """
         results = self.vector_index.similarity_search(query, top_k=top_k)
-        return [result.block_id for result in results]
+        block_ids = [result.block_id for result in results]
+
+        # Record access for retrieved blocks
+        for block_id in block_ids:
+            self.decay_manager.record_access(block_id, self.file_storage)
+
+        return block_ids
 
     def reflect(self, block_id: str) -> None:
         """Reflect on a knowledge block to generate insights or summaries.
@@ -154,21 +175,72 @@ class MemorySystem:
         if not block:
             raise ValueError(f"Knowledge block not found: {block_id}")
 
-        # Find related blocks
-        related = self.graph_storage.find_related(block_id, max_depth=2)
-        logger.info(f"Reflected on {block_id}, found {len(related)} related blocks")
+        # Find top-5 nearest neighbours from vector index (semantic similarity)
+        similar_ids = self.retrieve(block.content, top_k=5)
+        # Remove self from results
+        similar_ids = [sid for sid in similar_ids if sid != block_id]
 
-        # In a full implementation, this would use an LLM to generate insights
-        # For now, we just log the reflection
-        if related:
-            related_ids = [r[1] for r in related]
-            logger.info(f"Related blocks: {related_ids}")
+        # Also check graph for existing relationships
+        graph_related = self.graph_storage.find_related(block_id, max_depth=2)
+        graph_related_ids = [r[1] for r in graph_related] if graph_related else []
 
-    def compress(self, block_ids: List[str]) -> str:
+        # Combine vector and graph results, prioritize vector (semantic similarity)
+        all_related_ids = list(dict.fromkeys(similar_ids + graph_related_ids))[:5]
+
+        # Collect blocks for reflection
+        blocks_to_reflect = [block]
+        for related_id in all_related_ids:
+            related_block = self.file_storage.read(related_id)
+            if related_block:
+                blocks_to_reflect.append(related_block)
+
+        # Use Reflector if available
+        if self.reflector:
+            try:
+                relationships = self.reflector.reflect(blocks_to_reflect)
+                # Add suggested relationships to graph
+                for rel in relationships:
+                    try:
+                        # Ensure nodes exist
+                        source_block = self.file_storage.read(rel.source_id)
+                        target_block = self.file_storage.read(rel.target_id)
+                        if not source_block or not target_block:
+                            logger.warning(f"Skipping relationship {rel.source_id} -> {rel.target_id}: blocks not found")
+                            continue
+
+                        self.graph_storage.add_node(
+                            GraphNode(
+                                id=rel.source_id,
+                                label="KnowledgeBlock",
+                                properties={"title": source_block.title, "tags": source_block.tags},
+                            )
+                        )
+                        self.graph_storage.add_node(
+                            GraphNode(
+                                id=rel.target_id,
+                                label="KnowledgeBlock",
+                                properties={"title": target_block.title, "tags": target_block.tags},
+                            )
+                        )
+                        self.graph_storage.add_relationship(rel)
+                        logger.info(f"Added relationship from reflection: {rel.source_id} --[{rel.relationship_type}]--> {rel.target_id}")
+                    except Exception as e:
+                        logger.warning(f"Failed to add reflection relationship: {e}")
+            except Exception as e:
+                logger.error(f"Reflection failed: {e}")
+        else:
+            logger.debug("No LLM configured for reflection, skipping insight generation")
+
+        logger.info(f"Reflected on {block_id}, found {len(all_related_ids)} related blocks (vector: {len(similar_ids)}, graph: {len(graph_related_ids)})")
+        if all_related_ids:
+            logger.info(f"Related blocks: {all_related_ids}")
+
+    def compress(self, block_ids: List[str], max_tokens: Optional[int] = None) -> str:
         """Compress multiple knowledge blocks into a single summary.
 
         Args:
             block_ids: List of block IDs to compress.
+            max_tokens: Maximum tokens for compressed output (default: 4096).
 
         Returns:
             Compressed summary text.
@@ -182,32 +254,53 @@ class MemorySystem:
         if not blocks:
             return ""
 
-        # Simple compression: concatenate titles and first sentences
-        summary_parts = []
-        for block in blocks:
-            summary_parts.append(f"**{block.title}**: {block.content[:200]}...")
+        # Use Compressor if available
+        if self.compressor:
+            summary = self.compressor.compress(blocks, max_tokens=max_tokens)
+            logger.info(f"Compressed {len(blocks)} blocks into summary ({len(summary)} chars)")
+            return summary
+        else:
+            # Fallback: simple concatenation
+            summary_parts = []
+            for block in blocks:
+                summary_parts.append(f"**{block.title}**: {block.content[:200]}...")
+            summary = "\n\n".join(summary_parts)
+            logger.info(f"Compressed {len(blocks)} blocks into summary (fallback mode)")
+            return summary
 
-        summary = "\n\n".join(summary_parts)
-        logger.info(f"Compressed {len(blocks)} blocks into summary")
-        return summary
-
-    def decay(self, policy: str = "time") -> None:
-        """Apply decay policy to knowledge blocks (e.g., remove old/unused blocks).
+    def decay(
+        self,
+        policy: str = "time",
+        days_threshold: int = 180,
+        usage_threshold: float = 0.01,
+    ) -> List[str]:
+        """Apply decay policy to knowledge blocks (archive old/unused blocks).
 
         Args:
-            policy: Decay policy ('time', 'usage', 'none').
+            policy: Decay policy ('time', 'usage', 'both', or 'none').
+            days_threshold: Days since last access for time-based decay (default: 180).
+            usage_threshold: Minimum access count ratio for usage-based decay (default: 0.01).
+
+        Returns:
+            List of archived block IDs.
         """
         if policy == "none":
-            return
+            return []
 
-        all_ids = self.file_storage.list_all()
-        logger.info(f"Decay policy '{policy}' applied to {len(all_ids)} blocks")
+        archived = self.decay_manager.decay(
+            storage=self.file_storage,
+            policy=policy,
+            days_threshold=days_threshold,
+            usage_threshold=usage_threshold,
+        )
 
-        # In a full implementation, this would:
-        # - Track access frequency
-        # - Remove or archive old blocks based on policy
-        # - Update graph and vector index accordingly
-        # For now, it's a placeholder
+        # Remove from vector index (if possible)
+        for block_id in archived:
+            # Note: Vector index removal depends on implementation
+            # For now, we just log
+            logger.debug(f"Block {block_id} archived, should be removed from vector index")
+
+        return archived
 
     def materialize_context(self, goal: str, max_tokens: int = 4096) -> str:
         """Materialize a context string from relevant knowledge blocks for a goal.

@@ -1,0 +1,39 @@
+You are an AI assistant analyzing knowledge blocks to identify relationships and generate insights.
+
+## Knowledge Blocks to Analyze
+
+{% for block in blocks %}
+### Block {{ loop.index }}: [{{ block.id }}] {{ block.title }}
+
+**Tags**: {{ block.tags | join(", ") if block.tags else "None" }}
+
+**Content**:
+{{ block.content[:500] }}{% if block.content|length > 500 %}...{% endif %}
+
+{% endfor %}
+
+## Task
+
+Analyze these knowledge blocks and generate insights in 3-4 sentences about:
+
+1. **Relationships**: How do these blocks relate to each other?
+2. **Patterns**: What themes or patterns emerge across the blocks?
+3. **Connections**: What potential connections or relationships exist?
+4. **Insights**: What new understanding can be derived from combining these blocks?
+
+## Output Format
+
+Provide your analysis in the following format:
+
+**Relationships**: [Describe how blocks relate]
+
+**Patterns**: [Identify common themes]
+
+**Connections**: [Suggest specific connections]
+
+**Insights**: [Generate 3-4 sentence summary]
+
+---
+
+Your analysis:
+

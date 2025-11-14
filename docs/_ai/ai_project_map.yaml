@@ -1,0 +1,124 @@
+---
+status: current
+updated: 2025-11-14
+origin: ai/worker
+---
+
+# AI Project Map - Cognitive Memory Core
+
+project:
+  name: cognitive-memory-core
+  version: 0.2.0
+  description: "Hybrid AI memory system combining file storage, graph database, and vector search"
+  
+structure:
+  root: "."
+  source: "src/cmemory"
+  tests: "tests"
+  knowledge: "knowledge"
+  docs: "docs"
+  docker: "docker"
+  templates: "templates"
+  
+modules:
+  core:
+    - path: "src/cmemory/memory.py"
+      class: "MemorySystem"
+      description: "Main orchestrator class"
+      methods:
+        - record
+        - encode
+        - link
+        - retrieve
+        - reflect
+        - compress
+        - decay
+        - materialize_context
+    
+  storage:
+    - path: "src/cmemory/storage/file_storage.py"
+      class: "FileStorage"
+      description: "Markdown/JSON file-based storage"
+    
+  graph:
+    - path: "src/cmemory/graph/graph_storage.py"
+      class: "GraphStorage"
+      description: "Neo4j graph database integration"
+    
+  vector:
+    - path: "src/cmemory/vector/vector_index.py"
+      class: "VectorIndex"
+      description: "ChromaDB/FAISS vector search"
+    
+  reflection:
+    - path: "src/cmemory/reflection/reflector.py"
+      class: "Reflector"
+      description: "LLM-based reflection and relationship discovery"
+    
+  compression:
+    - path: "src/cmemory/compress/compressor.py"
+      class: "Compressor"
+      description: "Token-aware compression with RAG summarization"
+    
+  decay:
+    - path: "src/cmemory/decay/decay_manager.py"
+      class: "DecayManager"
+      description: "Lifecycle management and archival policies"
+  
+models:
+  - path: "src/cmemory/models.py"
+    classes:
+      - KnowledgeBlock
+      - GraphNode
+      - GraphRelationship
+      - SearchResult
+
+cli:
+  entrypoint: "src/cli.py"
+  commands:
+    - ingest
+    - autolink
+    - context
+    - search
+    - list-blocks
+
+dependencies:
+  core:
+    - langchain-community
+    - sentence-transformers
+    - chromadb
+    - neo4j
+    - markdown-it-py
+    - orjson
+    - jinja2
+    - tiktoken
+    - apscheduler
+  
+  dev:
+    - pytest
+    - pytest-cov
+    - pytest-asyncio
+    - pytest-mock
+
+services:
+  neo4j:
+    docker_compose: "docker/docker-compose.yml"
+    port: 7687
+    web_port: 7474
+  
+  chromadb:
+    docker_compose: "docker/docker-compose.yml"
+    port: 8000
+
+test_structure:
+  unit_tests: "tests/test_*.py"
+  e2e_tests: "tests/test_e2e.py"
+  markers:
+    - e2e
+
+documentation:
+  human: "docs/_project/"
+  ai: "docs/_ai/"
+  features: "docs/"
+  setup: "docs/SETUP.md"
+
