@@ -4,90 +4,210 @@ change_type: expand
 changed_on: 2025-11-14
 ---
 
-# Information Types and Reliability Model
+# Memory Information Model
 
-## Overview
+This document defines how information is categorized, validated, and maintained inside the cognitive-memory-core. It provides a conceptual foundation for volatility, reliability, validation, and sensor-based verification.
 
-This document describes a conceptual model for handling different types of information in the memory system, based on their change rate, reliability, and validation requirements.
+## 1. Information Types
 
-## Core Concepts
+Information stored in memory can be categorized into several types:
 
-### 1. Information Types by Change Rate
+* **Static Knowledge**: Rarely changes (architecture, principles, theory).
 
-Information can be categorized by how quickly it changes:
+* **Semi-Static Knowledge**: Changes sometimes (design decisions, configurations).
 
-- **Fast-changing information**: 
-  - Code status (build status, test results, deployment state)
-  - Real-time sensor data (weather, system metrics)
-  - Ephemeral state (current user sessions, active processes)
-  - **Handling**: These should be handled differently - not stored as permanent knowledge blocks, but rather as transient state or with explicit expiration
+* **Dynamic Knowledge**: Changes frequently (code status, logs, runtime events).
 
-- **Slow-changing information**:
-  - Documentation
-  - Design decisions
-  - Historical facts
-  - **Handling**: These are suitable for traditional knowledge blocks
+* **Ephemeral Knowledge**: Short-lived information (weather, timestamps, transient states).
 
-### 2. Reliability and Trustworthiness
+Each type influences how memory handles decay, validation, and access.
 
-Information has a **reliability level** that depends on its source:
+## 2. Volatility Levels
 
-- **Code-based information**: 
-  - **Per definition not reliable** - code changes, so information derived from code is inherently unstable
-  - Examples: "This function does X" (may be outdated if code changed)
-  - **Implication**: Code-derived knowledge should be marked as unreliable and require frequent re-validation
+Volatility describes how quickly information becomes outdated:
 
-- **Sensor-based information**:
-  - Depends on sensor accuracy and freshness
-  - Examples: "Is it raining now?" - requires checking a weather sensor
-  - **Implication**: Has a validation date and depends on sensor availability
+* **low**: stable for months/years.
 
-- **Human-verified information**:
-  - Higher reliability but may still become outdated
-  - Examples: Design documents, approved specifications
-  - **Implication**: Can be trusted but should have review dates
+* **medium**: stable for days/weeks.
 
-### 3. Validation and Freshness
+* **high**: stable for hours.
 
-Information has:
+* **ephemeral**: stable for minutes or seconds.
 
-- **Validation date**: When the information was last verified
-- **Expiration date**: When the information becomes stale
-- **Sensor dependency**: What sensor or source validates this information
-  - Example: "code_sensor" - validates by checking current code state
-  - Example: "weather_sensor" - validates by checking weather API
-  - Example: "human_review" - validates by human verification
+Volatility determines:
 
-### 4. Examples
+* decay speed
 
-#### Example 1: Code Status
+* required validation frequency
+
+* risk of using stale information
+
+## 3. Reliability Levels
+
+Reliability describes how trustworthy a piece of information is:
+
+* **1.0**: fully verified (code sensor, test agent, external API)
+
+* **0.7–0.99**: likely true, but not recently validated
+
+* **0.4–0.69**: uncertain, human or AI guess
+
+* **<0.4**: speculative, requires confirmation
+
+Reliability influences retrieval ranking and when the system must revalidate data.
+
+## 4. Validation Metadata
+
+Every information block may include validation metadata:
+
+```yaml
+validation:
+  validated_by: "code_test_agent"  # sensor/agent ID
+  validated_at: "2025-11-14T10:00:00Z"  # last validation timestamp
+  validity_window: "6h"  # how long the info is considered fresh
+  reliability: 0.92  # normalized reliability score
 ```
-Type: fast-changing
-Reliability: low (code-based, per definition unreliable)
+
+### Fields
+
+* **validated_by**: agent or system that confirmed the data.
+
+* **validated_at**: when it was last checked.
+
+* **validity_window**: how long the result is considered valid.
+
+* **reliability**: numeric reliability score based on validation quality.
+
+## 5. Sensors and Agents
+
+Sensors provide validation for specific knowledge categories:
+
+* **code sensor**: test runner verifying code correctness
+
+* **fs sensor**: file watcher validating file modifications
+
+* **runtime sensor**: monitors runtime metrics/events
+
+* **external sensors**: weather APIs, HTTP services, etc.
+
+Agents using sensors must update validation metadata after each check.
+
+## 6. Staleness Detection
+
+A block becomes stale when:
+
+* `now - validated_at > validity_window`, **or**
+
+* `reliability < threshold`, **or**
+
+* `volatility == high` and validation is old
+
+Stale data triggers:
+
+* revalidation request
+
+* downgrade in retrieval priority
+
+## 7. Integration with Decay
+
+Decay uses:
+
+* volatility → determines decay speed
+
+* reliability → influences archival
+
+* validated_at → prevents archiving recently validated blocks
+
+Dynamic and ephemeral data decays fastest.
+
+Static knowledge decays slowest.
+
+## 8. Integration with Reflection & Compression
+
+Reflection:
+
+* ignores or downranks outdated blocks
+
+* can propose new validation relationships ("X depends on Y")
+
+Compression:
+
+* includes reliability metadata when summarizing
+
+* may require fresh validation for high-volatility blocks
+
+## 9. Proposed KnowledgeBlock Schema Extension
+
+Logical (not yet implemented, design-level):
+
+```yaml
+id: ...
+title: ...
+content: ...
+type: static | semi-static | dynamic | ephemeral
+volatility: low | medium | high | ephemeral
+validation:
+  validated_at: timestamp
+  validated_by: string
+  validity_window: duration
+  reliability: float (0.0–1.0)
+```
+
+## 10. Benefits of This Model
+
+* Prevents the system from using stale data
+
+* Provides AI agents with clarity about trustworthiness
+
+* Enables safe combination of long-term and ephemeral knowledge
+
+* Supports automated revalidation workflows
+
+* Improves context quality and stability
+
+## 11. Examples
+
+### Example 1: Code Status
+```
+Type: dynamic
+Volatility: high
+Reliability: 0.3 (code-based, per definition unreliable)
 Validation: code_sensor
-Expiration: immediate (changes with every code change)
+Validity Window: immediate (changes with every code change)
 Handling: Should not be stored as permanent knowledge block
 ```
 
-#### Example 2: Weather Information
+### Example 2: Weather Information
 ```
-Type: fast-changing
-Reliability: medium (sensor-based)
+Type: ephemeral
+Volatility: ephemeral
+Reliability: 0.85 (sensor-based, depends on API accuracy)
 Validation: weather_sensor
-Expiration: 1 hour (weather changes)
+Validity Window: 1 hour (weather changes)
 Handling: Check sensor before use, don't cache long-term
 ```
 
-#### Example 3: Design Decision
+### Example 3: Design Decision
 ```
-Type: slow-changing
-Reliability: high (human-verified)
+Type: static
+Volatility: low
+Reliability: 0.95 (human-verified)
 Validation: human_review
-Expiration: 6 months (review cycle)
+Validity Window: 6 months (review cycle)
 Handling: Suitable for knowledge block storage
 ```
 
-## Implementation Considerations
+### Example 4: Configuration
+```
+Type: semi-static
+Volatility: medium
+Reliability: 0.8 (file-based, may change)
+Validation: fs_sensor
+Validity Window: 1 week
+Handling: Re-validate on file change
+```
+
+## 12. Implementation Considerations
 
 ### Metadata Extensions
 
@@ -99,12 +219,14 @@ class KnowledgeBlock:
     # ... existing fields ...
     
     # New fields for information types
-    information_type: str  # "fast-changing" | "slow-changing"
-    reliability: float  # 0.0 to 1.0
-    validation_date: Optional[datetime]
-    expiration_date: Optional[datetime]
-    sensor_dependency: Optional[str]  # "code_sensor", "weather_sensor", etc.
-    requires_revalidation: bool
+    information_type: str  # "static" | "semi-static" | "dynamic" | "ephemeral"
+    volatility: str  # "low" | "medium" | "high" | "ephemeral"
+    validation: Optional[Dict[str, Any]] = None  # validation metadata
+    # validation contains:
+    #   - validated_by: str
+    #   - validated_at: datetime
+    #   - validity_window: timedelta or str (e.g., "6h")
+    #   - reliability: float (0.0-1.0)
 ```
 
 ### Sensor Integration
@@ -112,7 +234,9 @@ class KnowledgeBlock:
 The system should support sensor plugins:
 
 - **Code Sensor**: Validates information by checking current code state
-- **Weather Sensor**: Validates weather-related information
+- **File System Sensor**: Validates information by checking file modifications
+- **Runtime Sensor**: Monitors runtime metrics and events
+- **Weather Sensor**: Validates weather-related information via external APIs
 - **API Sensor**: Validates information by calling external APIs
 - **Human Review Sensor**: Tracks human verification status
 
@@ -120,24 +244,26 @@ The system should support sensor plugins:
 
 When retrieving information:
 
-1. Check `expiration_date` - if expired, mark as stale
-2. Check `sensor_dependency` - if sensor available, re-validate
-3. Check `reliability` - warn if reliability is low
-4. For fast-changing information, prefer real-time lookup over cached blocks
+1. Check `validated_at` and `validity_window` - if expired, mark as stale
+2. Check `reliability` - warn if reliability is low (< 0.7)
+3. Check `volatility` - for high/ephemeral volatility, prefer real-time lookup
+4. Check `sensor_dependency` - if sensor available, re-validate
+5. For stale data, trigger revalidation request and downgrade retrieval priority
 
-## Future Implementation
+## 13. Future Implementation
 
 This is a **planned feature** for future versions (v0.4.0+):
 
-- [ ] Extend `KnowledgeBlock` model with reliability fields
+- [ ] Extend `KnowledgeBlock` model with volatility and validation fields
 - [ ] Implement sensor plugin system
-- [ ] Add validation workflow
-- [ ] Update retrieval to respect reliability and expiration
-- [ ] Add special handling for fast-changing information
+- [ ] Add staleness detection in retrieval
+- [ ] Update decay policy to use volatility and reliability
+- [ ] Integrate validation workflow with reflection and compression
+- [ ] Add special handling for ephemeral information (don't store as permanent blocks)
 
-## Related Concepts
+## 14. Related Concepts
 
-- **Decay Policy**: Can use reliability and expiration for archival decisions
+- **Decay Policy**: Uses volatility and reliability for archival decisions
 - **Compression**: Fast-changing information should not be compressed (too volatile)
 - **Reflection**: Should consider reliability when suggesting relationships
-
+- **Retrieval**: Should prioritize fresh, high-reliability information
