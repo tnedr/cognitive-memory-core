@@ -9,6 +9,8 @@ try:
 except ImportError:
     from typing_extensions import Literal
 
+from cmemory.compress import Compressor
+from cmemory.decay import DecayManager
 from cmemory.graph import GraphStorage
 from cmemory.models import GraphNode, GraphRelationship, KnowledgeBlock, SearchResult
 from cmemory.storage import FileStorage
@@ -76,6 +78,10 @@ class MemorySystem:
 
         self.file_storage.create(block, format="markdown")
         logger.info(f"Recorded knowledge block: {block_id}")
+
+        # Initialize access metadata
+        self.decay_manager._update_access_metadata(block)
+        self.file_storage.update(block)
 
         # Auto-encode and link
         self.encode(block_id)
