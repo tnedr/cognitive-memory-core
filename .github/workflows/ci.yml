@@ -105,9 +105,9 @@ jobs:
 
     - name: Run E2E tests
       run: |
-        uv run pytest tests/test_e2e.py -v -m e2e
-      env:
-        SKIP_DOCKER_TESTS: 0
+        uv run pytest tests/test_e2e.py -v -m e2e --tb=short
+      # Remove SKIP_DOCKER_TESTS - tests should fail if Docker services aren't available
+      # This ensures CI fails if E2E tests don't pass
 
     - name: Stop Docker Compose services
       if: always()
