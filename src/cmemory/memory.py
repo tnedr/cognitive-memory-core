@@ -4,6 +4,11 @@ import logging
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
+
 from cmemory.graph import GraphStorage
 from cmemory.models import GraphNode, GraphRelationship, KnowledgeBlock, SearchResult
 from cmemory.storage import FileStorage
@@ -142,7 +147,13 @@ class MemorySystem:
             List of block IDs ordered by relevance.
         """
         results = self.vector_index.similarity_search(query, top_k=top_k)
-        return [result.block_id for result in results]
+        block_ids = [result.block_id for result in results]
+
+        # Record access for retrieved blocks
+        for block_id in block_ids:
+            self.decay_manager.record_access(block_id, self.file_storage)
+
+        return block_ids
 
     def reflect(self, block_id: str) -> None:
         """Reflect on a knowledge block to generate insights or summaries.
@@ -164,11 +175,12 @@ class MemorySystem:
             related_ids = [r[1] for r in related]
             logger.info(f"Related blocks: {related_ids}")
 
-    def compress(self, block_ids: List[str]) -> str:
+    def compress(self, block_ids: List[str], max_tokens: Optional[int] = None) -> str:
         """Compress multiple knowledge blocks into a single summary.
 
         Args:
             block_ids: List of block IDs to compress.
+            max_tokens: Maximum tokens for compressed output (default: 4096).
 
         Returns:
             Compressed summary text.
@@ -182,32 +194,53 @@ class MemorySystem:
         if not blocks:
             return ""
 
-        # Simple compression: concatenate titles and first sentences
-        summary_parts = []
-        for block in blocks:
-            summary_parts.append(f"**{block.title}**: {block.content[:200]}...")
+        # Use Compressor if available
+        if self.compressor:
+            summary = self.compressor.compress(blocks, max_tokens=max_tokens)
+            logger.info(f"Compressed {len(blocks)} blocks into summary ({len(summary)} chars)")
+            return summary
+        else:
+            # Fallback: simple concatenation
+            summary_parts = []
+            for block in blocks:
+                summary_parts.append(f"**{block.title}**: {block.content[:200]}...")
+            summary = "\n\n".join(summary_parts)
+            logger.info(f"Compressed {len(blocks)} blocks into summary (fallback mode)")
+            return summary
 
-        summary = "\n\n".join(summary_parts)
-        logger.info(f"Compressed {len(blocks)} blocks into summary")
-        return summary
-
-    def decay(self, policy: str = "time") -> None:
-        """Apply decay policy to knowledge blocks (e.g., remove old/unused blocks).
+    def decay(
+        self,
+        policy: str = "time",
+        days_threshold: int = 180,
+        usage_threshold: float = 0.01,
+    ) -> List[str]:
+        """Apply decay policy to knowledge blocks (archive old/unused blocks).
 
         Args:
-            policy: Decay policy ('time', 'usage', 'none').
+            policy: Decay policy ('time', 'usage', 'both', or 'none').
+            days_threshold: Days since last access for time-based decay (default: 180).
+            usage_threshold: Minimum access count ratio for usage-based decay (default: 0.01).
+
+        Returns:
+            List of archived block IDs.
         """
         if policy == "none":
-            return
+            return []
 
-        all_ids = self.file_storage.list_all()
-        logger.info(f"Decay policy '{policy}' applied to {len(all_ids)} blocks")
+        archived = self.decay_manager.decay(
+            storage=self.file_storage,
+            policy=policy,
+            days_threshold=days_threshold,
+            usage_threshold=usage_threshold,
+        )
 
-        # In a full implementation, this would:
-        # - Track access frequency
-        # - Remove or archive old blocks based on policy
-        # - Update graph and vector index accordingly
-        # For now, it's a placeholder
+        # Remove from vector index (if possible)
+        for block_id in archived:
+            # Note: Vector index removal depends on implementation
+            # For now, we just log
+            logger.debug(f"Block {block_id} archived, should be removed from vector index")
+
+        return archived
 
     def materialize_context(self, goal: str, max_tokens: int = 4096) -> str:
         """Materialize a context string from relevant knowledge blocks for a goal.
