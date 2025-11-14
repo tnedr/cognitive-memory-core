@@ -104,6 +104,78 @@ def docker_compose_up() -> Generator[None, None, None]:
         )
 
 
+def _ingest_sample_blocks(memory_system: MemorySystem, knowledge_dir: Path) -> list[str]:
+    """Ingest 5 sample knowledge blocks for testing.
+
+    Args:
+        memory_system: MemorySystem instance
+        knowledge_dir: Directory containing knowledge block files
+
+    Returns:
+        List of ingested block IDs
+    """
+    block_files = sorted(knowledge_dir.glob("KB-20251107-*.md"))
+    if len(block_files) < 5:
+        # Create blocks programmatically if files don't exist
+        sample_blocks = [
+            {
+                "id": "KB-20251107-001",
+                "title": "Python Programming Fundamentals",
+                "content": "Python is a high-level programming language.",
+                "tags": ["python", "programming"],
+            },
+            {
+                "id": "KB-20251107-002",
+                "title": "Memory Systems in AI Agents",
+                "content": "Memory systems are crucial for AI agents.",
+                "tags": ["ai", "memory"],
+            },
+            {
+                "id": "KB-20251107-003",
+                "title": "Graph Databases and Neo4j",
+                "content": "Graph databases store relationships efficiently.",
+                "tags": ["database", "graph"],
+            },
+            {
+                "id": "KB-20251107-004",
+                "title": "Vector Embeddings and Semantic Search",
+                "content": "Vector embeddings enable semantic similarity search.",
+                "tags": ["vectors", "search"],
+            },
+            {
+                "id": "KB-20251107-005",
+                "title": "LangChain and LLM Integration",
+                "content": "LangChain provides tools for LLM applications.",
+                "tags": ["langchain", "llm"],
+            },
+        ]
+        block_ids = []
+        for block_data in sample_blocks:
+            block_id = memory_system.record(block_data["content"], block_data)
+            block_ids.append(block_id)
+        return block_ids
+    else:
+        # Ingest from files
+        block_ids = []
+        for block_file in block_files[:5]:
+            from cmemory.storage.file_storage import FileStorage
+
+            storage = FileStorage(base_path=str(knowledge_dir))
+            content = block_file.read_text(encoding="utf-8")
+            frontmatter, body = storage._parse_markdown_frontmatter(content)
+
+            meta = {
+                "id": frontmatter.get("id", block_file.stem),
+                "title": frontmatter.get("title", block_file.stem),
+                "tags": frontmatter.get("tags", []),
+            }
+            meta.update({k: v for k, v in frontmatter.items() if k not in ["id", "title", "tags"]})
+
+            block_id = memory_system.record(body, meta)
+            block_ids.append(block_id)
+        return block_ids
+
+
 @pytest.fixture
 def memory_system(tmp_path: Path, docker_compose_up: None) -> MemorySystem:
     """Create a MemorySystem instance with test configuration."""
@@ -117,6 +189,13 @@ def memory_system(tmp_path: Path, docker_compose_up: None) -> MemorySystem:
         neo4j_password="password",
         use_chroma=True,
     )
+
+
+@pytest.fixture
+def ingested_blocks(memory_system: MemorySystem, tmp_path: Path) -> list[str]:
+    """Ingest 5 sample knowledge blocks for E2E tests."""
+    knowledge_dir = Path(__file__).parent.parent / "knowledge"
+    return _ingest_sample_blocks(memory_system, knowledge_dir)
 
 
 @pytest.mark.e2e
@@ -225,13 +304,13 @@ def test_docker_services_available(docker_compose_up: None):
             assert result.single()["test"] == 1
         driver.close()
     except Exception as e:
-        pytest.skip(f"Neo4j not available: {e}")
+        pytest.fail(f"Neo4j not available: {e}")
 
     # Check ChromaDB (basic HTTP check)
     try:
         import httpx
 
         response = httpx.get("http://localhost:8000/api/v1/heartbeat", timeout=2)
-        assert response.status_code == 200
-    except Exception:
-        pytest.skip("ChromaDB not available")
+        assert response.status_code == 200, f"ChromaDB heartbeat returned {response.status_code}"
+    except Exception as e:
+        pytest.fail(f"ChromaDB not available: {e}")
