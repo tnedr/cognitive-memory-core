@@ -138,13 +138,15 @@ graph TD;
 
   * Ingest, autolink, context, search, list-blocks.
 
-* **Docs** — **60–70%**
+* **Docs** — **75–80%**
 
   * README, SETUP, reflector, compress/decay, POC/implementation summaries.
 
   * New `_project/` docs (this file + goal/concept/structure) now added.
 
-  * Still missing: detailed spec per module, AI-specific docs under `docs/_ai/`.
+  * AI-facing docs (`docs/_ai/`) now available: project map, context, status, guidelines.
+
+  * Still missing: detailed spec per module (can be created incrementally).
 
 * **CI/CD** — **70–80%**
 
