@@ -60,6 +60,31 @@ The Cognitive Memory Core is responsible for:
 
 - **Materializing Context**: building a task-specific context window from relevant blocks
 
+## 2.1. Information Volatility, Reliability, and Sensor-Based Validation
+
+The system recognizes that information has different properties that affect how it should be stored, retrieved, and validated:
+
+- **Information Volatility**: Some information changes slowly (architecture, principles) while other information changes rapidly (code status, runtime logs, sensor values). Storage format, decay policies, and retrieval strategies must account for volatility.
+
+- **Information Reliability**: Information has a reliability level based on its source:
+  - Code-based information is **per definition unreliable** (code changes)
+  - Sensor-based information depends on sensor accuracy and freshness
+  - Human-verified information has higher reliability but may still become outdated
+
+- **Validation and Expiry**: Information has:
+  - **Validation date**: When the information was last verified
+  - **Expiration date**: When the information becomes stale
+  - **Sensor dependency**: What sensor or source validates this information (e.g., `code_sensor`, `weather_sensor`, `test_agent`)
+
+- **Sensor-Based Verification**: The system supports sensor plugins that can re-validate information:
+  - Code sensors (test runners, build systems)
+  - Weather sensors (external APIs)
+  - File system sensors (file watchers)
+  - Metrics collectors
+  - Human prompts
+
+See `information_types.md` for the formal definition of the Memory Information Model.
+
 ## 3. Intended Users
 
 - **AI agents** (Scoper, Composer, Planner, etc.) that:

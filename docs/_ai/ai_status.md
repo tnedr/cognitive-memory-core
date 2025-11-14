@@ -62,6 +62,11 @@ origin: ai/worker
 2. **LLM Dependency**: Reflection and compression need external LLM
 3. **Embedding Model**: Currently uses dummy embeddings (sentence-transformers available)
 4. **API Layer**: Not yet implemented (planned for v0.4.0)
+5. **Information Reliability Model**: Conceptual model defined (see `docs/_project/information_types.md`), but not yet implemented in code
+   - Volatility classification not yet in `KnowledgeBlock` model
+   - Reliability scoring not yet tracked
+   - Sensor-based validation not yet implemented
+   - Planned for v0.4.0+
 
 ## Recent Changes
 
@@ -74,6 +79,11 @@ origin: ai/worker
 2. Add scheduler for automatic decay
 3. Design FastAPI wrapper
 4. Add file watcher for auto re-encode
+5. Implement Information Reliability Model (v0.4.0+)
+   - Add volatility, reliability, validation fields to `KnowledgeBlock`
+   - Implement sensor plugin system
+   - Add validation workflow
+   - Update retrieval to respect reliability and expiration
 
 ## Branch Information
 

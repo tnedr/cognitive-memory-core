@@ -74,6 +74,27 @@ The system is orchestrated by `MemorySystem` class (`src/cmemory/memory.py`), wh
 - Graph storage falls back to in-memory if Neo4j unavailable
 - Compression requires LLM for high-quality results (fallback: truncation)
 
+## Information Reliability Model
+
+The system recognizes that information has different properties:
+
+- **Volatility**: Information can be fast-changing (code status, sensor data) or slow-changing (documentation, design decisions)
+- **Reliability**: Information has a reliability score (0.0-1.0) based on source:
+  - Code-based information: **per definition unreliable** (code changes)
+  - Sensor-based information: Medium reliability (depends on sensor accuracy)
+  - Human-verified information: High reliability (but may become outdated)
+- **Validation**: Information has validation dates, expiration dates, and sensor dependencies
+- **Sensor-Based Verification**: System supports sensor plugins (code_sensor, weather_sensor, test_agent, etc.) for re-validation
+
+**Critical Rule**: Before using information, check:
+1. `reliability` field (if < 0.7, re-validate)
+2. `validated_at` and `validity_window` (if expired, re-validate)
+3. `sensor_dependency` (if set, verify sensor is available)
+
+For fast-changing information, prefer real-time sensor lookup over cached blocks.
+
+See `docs/_project/information_types.md` for the complete Memory Information Model.
+
 ## File Locations
 
 - Source code: `src/cmemory/`

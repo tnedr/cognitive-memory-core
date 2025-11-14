@@ -107,3 +107,34 @@ origin: ai/worker
 - **SHOULD** maintain `content_hash` for change detection
 - **MUST** handle both Markdown and JSON formats
 
+## Information Reliability and Validation
+
+### Reliability Rules
+
+- **MUST** check `reliability` field before using information in critical decisions
+- **MUST** re-validate information if `reliability < 0.7` before use
+- **MUST** check `validated_at` and `validity_window` before using information
+- **SHOULD** prefer sensor-based validation over cached information for fast-changing data
+
+### Validation Behavior
+
+- **IF** `block.reliability < 0.7` OR `last_validated` is too old → **MUST** re-check via sensor before using
+- **IF** `block.volatility == "fast-changing"` → **MUST** check sensor/API rather than using cached block
+- **IF** `block.sensor_dependency` is set → **SHOULD** verify sensor is available before using information
+- **IF** information is expired → **MUST** mark as stale and attempt re-validation
+
+### Code-Based Information
+
+- **REMEMBER**: Code-based information is **per definition unreliable**
+- **MUST** always re-validate code-based information via `code_sensor` before use
+- **SHOULD NOT** store code status as permanent knowledge blocks (too volatile)
+- **SHOULD** use transient state or explicit expiration for code-derived information
+
+### Sensor Integration
+
+- **MUST** respect sensor dependencies when retrieving information
+- **SHOULD** implement sensor plugins for validation (code_sensor, weather_sensor, etc.)
+- **MUST** handle sensor unavailability gracefully (fallback to cached data with reliability warning)
+
+See `docs/_project/information_types.md` for the complete Memory Information Model.
+
