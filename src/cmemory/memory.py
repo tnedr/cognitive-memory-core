@@ -158,13 +158,21 @@ class MemorySystem:
         if not block:
             raise ValueError(f"Knowledge block not found: {block_id}")
 
-        # Find related blocks
-        related = self.graph_storage.find_related(block_id, max_depth=2)
-        related_ids = [r[1] for r in related] if related else []
+        # Find top-5 nearest neighbours from vector index (semantic similarity)
+        similar_ids = self.retrieve(block.content, top_k=5)
+        # Remove self from results
+        similar_ids = [sid for sid in similar_ids if sid != block_id]
+
+        # Also check graph for existing relationships
+        graph_related = self.graph_storage.find_related(block_id, max_depth=2)
+        graph_related_ids = [r[1] for r in graph_related] if graph_related else []
+
+        # Combine vector and graph results, prioritize vector (semantic similarity)
+        all_related_ids = list(dict.fromkeys(similar_ids + graph_related_ids))[:5]
 
         # Collect blocks for reflection
         blocks_to_reflect = [block]
-        for related_id in related_ids[:5]:  # Limit to top 5 related blocks
+        for related_id in all_related_ids:
             related_block = self.file_storage.read(related_id)
             if related_block:
                 blocks_to_reflect.append(related_block)
@@ -176,18 +184,25 @@ class MemorySystem:
                 # Add suggested relationships to graph
                 for rel in relationships:
                     try:
+                        # Ensure nodes exist
+                        source_block = self.file_storage.read(rel.source_id)
+                        target_block = self.file_storage.read(rel.target_id)
+                        if not source_block or not target_block:
+                            logger.warning(f"Skipping relationship {rel.source_id} -> {rel.target_id}: blocks not found")
+                            continue
+
                         self.graph_storage.add_node(
                             GraphNode(
                                 id=rel.source_id,
                                 label="KnowledgeBlock",
-                                properties={},
+                                properties={"title": source_block.title, "tags": source_block.tags},
                             )
                         )
                         self.graph_storage.add_node(
                             GraphNode(
                                 id=rel.target_id,
                                 label="KnowledgeBlock",
-                                properties={},
+                                properties={"title": target_block.title, "tags": target_block.tags},
                             )
                         )
                         self.graph_storage.add_relationship(rel)
@@ -196,10 +211,12 @@ class MemorySystem:
                         logger.warning(f"Failed to add reflection relationship: {e}")
             except Exception as e:
                 logger.error(f"Reflection failed: {e}")
+        else:
+            logger.debug("No LLM configured for reflection, skipping insight generation")
 
-        logger.info(f"Reflected on {block_id}, found {len(related)} related blocks")
-        if related_ids:
-            logger.info(f"Related blocks: {related_ids}")
+        logger.info(f"Reflected on {block_id}, found {len(all_related_ids)} related blocks (vector: {len(similar_ids)}, graph: {len(graph_related_ids)})")
+        if all_related_ids:
+            logger.info(f"Related blocks: {all_related_ids}")
 
     def compress(self, block_ids: List[str]) -> str:
         """Compress multiple knowledge blocks into a single summary.
