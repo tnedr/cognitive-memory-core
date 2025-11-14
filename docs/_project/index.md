@@ -18,6 +18,8 @@ This file is the human-facing entry point to all long-term project docs.
 
 - `status_human.md` – human-readable current status and roadmap
 
+- `information_types.md` – information types, reliability, and validation model
+
 ## Specification (by area)
 
 Planned structure (per documentation framework):

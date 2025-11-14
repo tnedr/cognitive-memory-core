@@ -135,6 +135,14 @@
 
 ## Future Considerations (v0.3.0+)
 
+- **Information Types and Reliability Model** (v0.4.0+)
+  - Support for fast-changing vs slow-changing information
+  - Reliability scoring based on source (code-based info is per definition unreliable)
+  - Validation dates and sensor dependencies
+  - Sensor plugin system (code_sensor, weather_sensor, API sensors)
+  - Special handling for ephemeral information
+  - See: `docs/_project/information_types.md`
+
 - **Multi-agent context routing**: Share memory across multiple AI agents
 - **Meta-memory**: System learns about its own memory patterns
 - **Self-critique**: Memory system evaluates its own retrievals
