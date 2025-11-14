@@ -78,5 +78,10 @@ cognitive-memory-core/
 
 This file is for humans to understand "where things live" at a glance. For AI
 
-agents, the equivalent is `docs/_ai/ai_project_map.yaml` (to be created).
+agents, see the structured documentation in `docs/_ai/`:
+
+- `ai_project_map.yaml` – machine-readable project structure
+- `ai_context.md` – agent orientation and context
+- `ai_status.md` – current project status
+- `ai_guidelines.md` – agent guidelines and constraints
 

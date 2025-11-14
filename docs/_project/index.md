@@ -42,6 +42,15 @@ Planned structure (per documentation framework):
 
 _(These spec files can be created incrementally as the project stabilises in each area.)_
 
+## AI-Facing Documentation
+
+Machine-readable documentation for AI agents:
+
+- `../_ai/ai_project_map.yaml` – structured project map for agents
+- `../_ai/ai_context.md` – context and orientation for AI agents
+- `../_ai/ai_status.md` – current status in machine-readable format
+- `../_ai/ai_guidelines.md` – guidelines and constraints for AI agents
+
 ## Other Documentation Areas
 
 See the general framework:

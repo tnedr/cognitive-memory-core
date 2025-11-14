@@ -172,11 +172,13 @@ Near-term focus (v0.3.x):
 
    * Add a small CLI command or script for manual decay runs.
 
-3. **AI-Facing Documentation**
+3. **AI-Facing Documentation** ✅
 
-   * Create `docs/_ai/ai_project_map.yaml` and `docs/_ai/ai_context.md` as per the
+   * `docs/_ai/ai_project_map.yaml` and `docs/_ai/ai_context.md` created.
 
-     documentation framework, so agents can orient themselves reliably. 
+   * `docs/_ai/ai_status.md` and `docs/_ai/ai_guidelines.md` available.
+
+   * Agents can now use structured, machine-readable orientation layer. 
 
 4. **API Layer (Design Draft)**
 
