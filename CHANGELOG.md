@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - LangChain integration for insight generation
   - Jinja2 prompt templates (`templates/reflect.jinja`)
   - Automatic relationship suggestion from LLM analysis
+<<<<<<< HEAD
   - Vector similarity-based block discovery (top-5 nearest neighbours)
   - Async reflection support
 - End-to-end integration tests (`tests/test_e2e.py`)
@@ -47,6 +48,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Decay policy with `last_access` tracking and archival
 - File watcher for auto re-encode on changes
 
+=======
+  - Async reflection support
+- End-to-end integration tests (`tests/test_e2e.py`)
+- CI/CD improvements:
+  - E2E tests run on all PRs (not just main branch)
+  - Improved Docker health checks
+  - Increased service startup wait time
+
+### In Progress
+- Token-aware `compress()` with RAG summarization
+- Decay policy with `last_access` tracking
+- File watcher for auto re-encode
+
+>>>>>>> origin/feature/llm-reflection
 ### Planned
 - REST/GraphQL API with FastAPI
 - Front-end UI (optional)
