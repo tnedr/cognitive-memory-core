@@ -23,7 +23,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "cmemory=src.cli:cli",
+            "cmemory=cmemory.cli_entry:cli",
         ],
     },
 )

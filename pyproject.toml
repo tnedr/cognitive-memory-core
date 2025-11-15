@@ -50,7 +50,7 @@ dev = [
 ]
 
 [project.scripts]
-cmemory = "src.cli:cli"
+cmemory = "cmemory.cli_entry:cli"
 
 [tool.uv]
 # Use UV for package management with global cache

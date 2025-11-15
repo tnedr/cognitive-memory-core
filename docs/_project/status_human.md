@@ -6,7 +6,37 @@ changed_on: 2025-11-14
 
 # Project Status — 2025-11-14
 
+## installation
+
+cd E:\Repos\ai_human_collab
+
+uv pip install -e E:\Repos\cognitive-memory-core
+
+# Now it works
+
+uv run cmemory --help
+uv run python -m src.cli digest-inflow
+
+
+
 ## How to Run / Test
+
+# Create files in inflow/
+echo "My note" > inflow/my_note.txt
+
+# Digest them
+uv run python -m src.cli digest-inflow
+
+# List blocks
+uv run python -m src.cli list-blocks
+
+# Search for content
+uv run python -m src.cli search "your query"
+
+
+
+
+
 
 - Start services (optional, for full E2E):
 
