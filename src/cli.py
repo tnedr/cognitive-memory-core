@@ -117,21 +117,54 @@ def context(ctx, goal, max_tokens, output):
 @cli.command()
 @click.argument("query")
 @click.option("--top-k", default=5, help="Number of results to return")
+@click.option("--boost", multiple=True, help="Keywords to boost (can be used multiple times)")
+@click.option("--exclude", multiple=True, help="Keywords to exclude (can be used multiple times)")
 @click.pass_context
-def search(ctx, query, top_k):
-    """Search for knowledge blocks."""
+def search(ctx, query, top_k, boost, exclude):
+    """Search for knowledge blocks with hybrid scoring (semantic + keyword boosting)."""
     memory = ctx.obj["memory"]
-    results = memory.vector_index.similarity_search(query, top_k=top_k)
+
+    # Use retrieve() for hybrid scoring, or similarity_search() for raw semantic
+    boost_list = list(boost) if boost else None
+    exclude_list = list(exclude) if exclude else None
+
+    if boost_list or exclude_list:
+        # Use hybrid retrieval
+        block_ids = memory.retrieve(query, top_k=top_k, boost=boost_list, exclude=exclude_list)
+        results = []
+        for block_id in block_ids:
+            block = memory.file_storage.read(block_id)
+            if block:
+                # Recompute score for display (approximate)
+                vector_results = memory.vector_index.similarity_search(query, top_k=top_k * 2)
+                score = next((r.score for r in vector_results if r.block_id == block_id), 0.0)
+                # Apply boosts for display
+                if boost_list:
+                    boost_lower = [kw.lower() for kw in boost_list]
+                    title_lower = block.title.lower()
+                    content_lower = block.content.lower()
+                    for keyword in boost_lower:
+                        if keyword in title_lower:
+                            score += 0.2
+                        if keyword in content_lower:
+                            score += 0.1
+                results.append((block_id, score, block))
+    else:
+        # Use raw semantic search
+        vector_results = memory.vector_index.similarity_search(query, top_k=top_k)
+        results = []
+        for result in vector_results:
+            block = memory.file_storage.read(result.block_id)
+            if block:
+                results.append((result.block_id, result.score, block))
 
     if not results:
         click.echo("No results found")
         return
 
     click.echo(f"Found {len(results)} results:\n")
-    for i, result in enumerate(results, 1):
-        block = memory.file_storage.read(result.block_id)
-        title = block.title if block else result.block_id
-        click.echo(f"{i}. [{result.block_id}] {title} (score: {result.score:.3f})")
+    for i, (block_id, score, block) in enumerate(results, 1):
+        click.echo(f"{i}. [{block_id}] {block.title} (score: {score:.3f})")
 
 
 @cli.command()
@@ -169,6 +202,89 @@ def digest_inflow(ctx, inflow_path):
             click.echo(f"  • {rid}")
     else:
         click.echo("No files found in inflow directory.")
+
+
+@cli.command("reindex-all")
+@click.pass_context
+def reindex_all_cmd(ctx):
+    """Recompute embeddings for all knowledge blocks (full reindex).
+
+    This command clears the vector index and rebuilds embeddings for all blocks.
+    Useful when switching embedding models (e.g., dummy -> OpenAI) or fixing corrupted indices.
+    """
+    memory = ctx.obj["memory"]
+    click.echo("Reindexing all knowledge blocks...")
+    n = memory.reindex_all()
+    click.echo(f"[OK] Reindexed {n} blocks")
+
+
+@cli.command("chroma-reset")
+@click.pass_context
+def chroma_reset_cmd(ctx):
+    """Reset ChromaDB vector store (delete all embeddings).
+
+    This command completely clears the ChromaDB collection and removes the persistent storage.
+    Use this when you need a completely fresh start or when vectors are corrupted.
+    After reset, run 'reindex-all' to rebuild embeddings.
+    """
+    memory = ctx.obj["memory"]
+    from pathlib import Path
+
+    if memory.vector_index.use_chroma and memory.vector_index.client:
+        try:
+            collection_name = memory.vector_index.collection_name
+            chroma_path = Path.cwd() / ".chroma"
+
+            # Delete the collection first
+            try:
+                memory.vector_index.client.delete_collection(collection_name)
+                click.echo(f"[OK] Deleted ChromaDB collection: {collection_name}")
+            except Exception as e:
+                click.echo(f"[WARN] Collection may not exist: {e}")
+
+            # Close the client to release file locks (Windows)
+            try:
+                # ChromaDB PersistentClient doesn't have explicit close, but we can clear the reference
+                memory.vector_index.collection = None
+                memory.vector_index.client = None
+            except Exception:
+                pass
+
+            # Remove persistent storage directory (after closing client)
+            if chroma_path.exists():
+                import shutil
+                import time
+
+                # On Windows, wait a moment for file handles to release
+                time.sleep(0.5)
+                try:
+                    shutil.rmtree(chroma_path)
+                    click.echo(f"[OK] Removed ChromaDB storage: {chroma_path}")
+                except PermissionError:
+                    click.echo(
+                        f"[WARN] Could not delete {chroma_path} (file may be locked). "
+                        "Close other processes and try again, or delete manually."
+                    )
+            else:
+                click.echo("[INFO] No persistent ChromaDB storage found")
+
+            # Recreate client and collection
+            import chromadb
+            from chromadb.config import Settings
+
+            chroma_path.mkdir(exist_ok=True)
+            memory.vector_index.client = chromadb.PersistentClient(
+                path=str(chroma_path),
+                settings=Settings(anonymized_telemetry=False),
+            )
+            memory.vector_index.collection = memory.vector_index.client.create_collection(collection_name)
+            click.echo(f"[OK] Created fresh ChromaDB collection: {collection_name}")
+            click.echo("[INFO] Run 'reindex-all' to rebuild embeddings")
+        except Exception as e:
+            click.echo(f"[ERROR] Failed to reset ChromaDB: {e}", err=True)
+            raise
+    else:
+        click.echo("[INFO] ChromaDB not in use, nothing to reset")
 
 
 if __name__ == "__main__":

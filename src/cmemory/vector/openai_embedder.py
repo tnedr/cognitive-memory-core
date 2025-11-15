@@ -33,20 +33,22 @@ class OpenAIEmbedder:
         self.model = "text-embedding-3-small"
         self.dimension = 1536  # text-embedding-3-small dimension
 
-        if self.api_key:
-            try:
-                from openai import OpenAI
+        if not self.api_key:
+            logger.error("OPENAI_API_KEY not found in environment variables or .env file")
+            self.client = None
+            return
 
-                self.client = OpenAI(api_key=self.api_key)
-                logger.info("OpenAI embedder initialized with API key")
-            except ImportError:
-                logger.warning("openai package not installed, OpenAI embeddings unavailable")
-                self.client = None
-            except Exception as e:
-                logger.warning(f"Failed to initialize OpenAI client: {e}")
-                self.client = None
-        else:
-            logger.debug("No OPENAI_API_KEY found, OpenAI embeddings unavailable")
+        try:
+            from openai import OpenAI
+
+            self.client = OpenAI(api_key=self.api_key)
+            logger.info("OpenAI embedder initialized with API key")
+        except ImportError:
+            logger.error("openai package not installed. Install with: uv pip install openai")
+            self.client = None
+        except Exception as e:
+            logger.error(f"Failed to initialize OpenAI client: {e}")
+            self.client = None
 
     def is_available(self) -> bool:
         """Check if OpenAI embeddings are available."""

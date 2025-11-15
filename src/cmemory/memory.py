@@ -149,18 +149,71 @@ class MemorySystem:
         self.graph_storage.add_relationship(relationship)
         logger.info(f"Linked {src_id} --[{rel}]--> {dst_id}")
 
-    def retrieve(self, query: str, top_k: int = 5) -> List[str]:
-        """Retrieve relevant knowledge blocks for a query.
+    def retrieve(
+        self,
+        query: str,
+        top_k: int = 5,
+        boost: Optional[List[str]] = None,
+        exclude: Optional[List[str]] = None,
+    ) -> List[str]:
+        """Retrieve relevant knowledge blocks for a query with hybrid scoring.
 
         Args:
             query: Search query text.
             top_k: Number of results to return.
+            boost: Optional list of keywords to boost scores (title: +0.2, content: +0.1).
+            exclude: Optional list of keywords to exclude from results.
 
         Returns:
-            List of block IDs ordered by relevance.
+            List of block IDs ordered by hybrid relevance score.
         """
-        results = self.vector_index.similarity_search(query, top_k=top_k)
-        block_ids = [result.block_id for result in results]
+        # Get semantic search results with cosine similarity
+        results = self.vector_index.similarity_search(query, top_k=top_k * 2 if boost or exclude else top_k)
+
+        # Apply hybrid scoring (semantic + keyword boosting)
+        scored_results = []
+        for result in results:
+            block = self.file_storage.read(result.block_id)
+            if not block:
+                continue
+
+            # Start with cosine similarity score
+            hybrid_score = result.score
+
+            # Apply keyword boosting
+            if boost:
+                boost_lower = [kw.lower() for kw in boost]
+                title_lower = block.title.lower()
+                content_lower = block.content.lower()
+
+                for keyword in boost_lower:
+                    if keyword in title_lower:
+                        hybrid_score += 0.2
+                    if keyword in content_lower:
+                        hybrid_score += 0.1
+
+            # Apply exclusion filter
+            if exclude:
+                exclude_lower = [kw.lower() for kw in exclude]
+                title_lower = block.title.lower()
+                content_lower = block.content.lower()
+
+                should_exclude = False
+                for keyword in exclude_lower:
+                    if keyword in title_lower or keyword in content_lower:
+                        should_exclude = True
+                        break
+
+                if should_exclude:
+                    continue
+
+            scored_results.append((result.block_id, hybrid_score, block))
+
+        # Sort by hybrid score (descending)
+        scored_results.sort(key=lambda x: x[1], reverse=True)
+
+        # Return top_k block IDs
+        block_ids = [block_id for block_id, _, _ in scored_results[:top_k]]
 
         # Record access for retrieved blocks
         for block_id in block_ids:
@@ -340,4 +393,58 @@ class MemorySystem:
         context = "\n".join(context_parts)
         logger.info(f"Materialized context with {len(context_parts)} blocks ({current_length} tokens)")
         return context
+
+    def reindex_all(self) -> int:
+        """Recompute embeddings for all knowledge blocks.
+
+        Clears the vector index first, then re-adds all embeddings.
+        This is useful when switching embedding models or fixing corrupted indices.
+
+        Returns:
+            Number of blocks reindexed.
+        """
+        # Step 1: List all blocks
+        all_ids = self.file_storage.list_all()
+        if not all_ids:
+            logger.info("No blocks to reindex")
+            return 0
+
+        logger.info(f"Starting reindex of {len(all_ids)} blocks")
+
+        # Step 2: Clear vector database
+        if self.vector_index.use_chroma and self.vector_index.collection:
+            try:
+                # Delete and recreate ChromaDB collection
+                self.vector_index.client.delete_collection(self.vector_index.collection_name)
+                self.vector_index.collection = self.vector_index.client.create_collection(
+                    self.vector_index.collection_name
+                )
+                logger.info("Cleared ChromaDB collection")
+            except Exception as e:
+                logger.error(f"Failed to reset ChromaDB: {e}")
+                # Fallback to FAISS
+                self.vector_index.use_chroma = False
+                from cmemory.vector.vector_index import FAISSIndex
+
+                self.vector_index.faiss_index = FAISSIndex(dimension=self.vector_index.embedding_dimension)
+        else:
+            # Reset FAISS index
+            from cmemory.vector.vector_index import FAISSIndex
+
+            self.vector_index.faiss_index = FAISSIndex(dimension=self.vector_index.embedding_dimension)
+            logger.info("Cleared FAISS index")
+
+        # Step 3: Rebuild embeddings for all blocks
+        count = 0
+        for block_id in all_ids:
+            block = self.file_storage.read(block_id)
+            if not block:
+                logger.warning(f"Block not found: {block_id}, skipping")
+                continue
+
+            self.vector_index.add_embeddings([block.id], [block.content])
+            count += 1
+
+        logger.info(f"Reindexed {count} blocks successfully")
+        return count
 

@@ -91,8 +91,8 @@ def test_vector_index_with_openai():
             assert len(embedding) == 1536
 
 
-def test_vector_index_openai_fallback():
-    """Test VectorIndex falls back when OpenAI fails."""
+def test_vector_index_openai_fails_raises_error():
+    """Test VectorIndex raises error when OpenAI fails."""
     mock_key = "sk-test-key-12345"
     with patch.dict(os.environ, {"OPENAI_API_KEY": mock_key}):
         with patch("openai.OpenAI") as mock_openai:
@@ -101,24 +101,14 @@ def test_vector_index_openai_fallback():
             mock_openai.return_value = mock_client
 
             index = VectorIndex(use_chroma=False, use_openai=True)
-            # Should fall back to sentence-transformers or dummy
-            embedding = index._get_embedding("test text")
-            # Will be dummy or sentence-transformers dimension
-            assert len(embedding) > 0
-            # Verify fallback worked - embedding should be generated despite OpenAI error
-            # (dimension may be 1536 if OpenAI was initialized, but content is dummy/fallback)
-            assert all(x == 0.0 for x in embedding) or len(embedding) == 384  # Dummy or ST
+            # Should raise RuntimeError when OpenAI fails
+            with pytest.raises(RuntimeError, match="Failed to generate OpenAI embedding"):
+                index._get_embedding("test text")
 
 
-def test_vector_index_no_openai_key():
-    """Test VectorIndex when no OpenAI key is available."""
+def test_vector_index_no_openai_key_raises_error():
+    """Test VectorIndex raises error when no OpenAI key is available."""
     with patch.dict(os.environ, {}, clear=True):
-        index = VectorIndex(use_chroma=False, use_openai=True)
-        assert index.openai_embedder is None or not index.openai_embedder.is_available()
-        # embedder may be None if sentence-transformers not available
-        # Just verify it doesn't crash and returns an embedding
-        embedding = index._get_embedding("test text")
-        assert len(embedding) > 0
-        # Should use fallback (sentence-transformers or dummy)
-        assert index.embedding_dimension in [384, 1536]  # Accept either
+        with pytest.raises(RuntimeError, match="OpenAI embeddings are required"):
+            VectorIndex(use_chroma=False, use_openai=True)
 

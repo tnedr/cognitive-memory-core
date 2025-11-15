@@ -108,9 +108,9 @@ If ChromaDB is unavailable:
 2. **E2E tests**: Require Docker services running
    - Skip with: `SKIP_DOCKER_TESTS=1 pytest tests/test_e2e.py`
 
-## Using OpenAI Embeddings (Recommended)
+## Using OpenAI Embeddings (Required)
 
-For high-quality semantic search, use OpenAI embeddings instead of local models. This avoids dependency conflicts and provides LLM-grade semantic understanding.
+OpenAI embeddings are **required** for semantic search. The system uses OpenAI's `text-embedding-3-small` model for high-quality, LLM-grade semantic understanding. There are no fallbacks - the system will fail clearly if OpenAI is not configured.
 
 ### Setup
 
@@ -127,14 +127,14 @@ For high-quality semantic search, use OpenAI embeddings instead of local models.
 3. **That's it!** The system will automatically:
    - Detect the `OPENAI_API_KEY` environment variable
    - Use OpenAI `text-embedding-3-small` model (1536 dimensions)
-   - Fall back to sentence-transformers or dummy embeddings if unavailable
+   - **Fail clearly** if the API key is missing (no silent fallbacks)
 
 ### Benefits
 
-- **No dependency conflicts**: Bypasses sentence-transformers version issues
+- **No dependency conflicts**: No sentence-transformers version issues
 - **High-quality embeddings**: LLM-grade semantic understanding
 - **Fast and reliable**: OpenAI API is production-ready
-- **Automatic fallback**: Works even if API key is missing
+- **Deterministic behavior**: System fails clearly if not configured, no silent fallbacks
 
 ### Verification
 
@@ -144,11 +144,48 @@ After setting up, test semantic search:
 # Ingest some blocks
 uv run cmemory ingest knowledge/your-file.md
 
-# Search (should now return intelligent results)
+# Basic semantic search
 uv run cmemory search "your query"
+
+# Hybrid search with keyword boosting
+uv run cmemory search "your query" --boost keyword1 --boost keyword2
+
+# Search with exclusions
+uv run cmemory search "your query" --exclude unwanted --exclude test
 ```
 
-You should see real semantic matches instead of "No results found".
+You should see real semantic matches with cosine similarity scores (range -1 to +1, typically 0.0 to 1.0 for relevant results).
+
+### Reindexing all embeddings
+
+If you switch to OpenAI embeddings or want to refresh all vectors:
+
+```bash
+uv run cmemory reindex-all
+```
+
+This rebuilds embeddings for all knowledge blocks and clears old vectors. Useful when:
+- Fixing corrupted vector indices
+- After updating embedding models
+- When switching between different OpenAI embedding models
+
+**Note**: Reindexing preserves all block content and metadata - only embeddings are refreshed.
+
+### Resetting ChromaDB (complete cleanup)
+
+If you need a completely fresh start or vectors are corrupted:
+
+```bash
+uv run cmemory chroma-reset
+uv run cmemory reindex-all
+```
+
+The `chroma-reset` command:
+- Deletes the ChromaDB collection
+- Removes persistent storage files
+- Creates a fresh empty collection
+
+**Use this when**: You have mixed dummy/OpenAI vectors causing "No results found" even after reindexing.
 
 ### Cost
 
