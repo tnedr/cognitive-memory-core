@@ -22,7 +22,8 @@ def test_retrieve_with_explain():
 
         with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test-key"}):
             with tempfile.TemporaryDirectory() as tmpdir:
-                mem = MemorySystem(knowledge_path=tmpdir, use_chroma=False)
+                with patch("chromadb.PersistentClient"):
+                    mem = MemorySystem(knowledge_path=tmpdir)
 
                 # Create blocks with specific content
                 id1 = mem.record(
@@ -70,7 +71,8 @@ def test_retrieve_without_explain_backwards_compatible():
 
         with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test-key"}):
             with tempfile.TemporaryDirectory() as tmpdir:
-                mem = MemorySystem(knowledge_path=tmpdir, use_chroma=False)
+                with patch("chromadb.PersistentClient"):
+                    mem = MemorySystem(knowledge_path=tmpdir)
 
                 id1 = mem.record("Test content", {"id": "TEST-001", "title": "Test"})
                 mem.encode(id1)
@@ -94,7 +96,8 @@ def test_explanation_contains_keyword_matches():
 
         with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test-key"}):
             with tempfile.TemporaryDirectory() as tmpdir:
-                mem = MemorySystem(knowledge_path=tmpdir, use_chroma=False)
+                with patch("chromadb.PersistentClient"):
+                    mem = MemorySystem(knowledge_path=tmpdir)
 
                 id1 = mem.record(
                     "NAD boosters are important for longevity",
@@ -128,7 +131,8 @@ def test_explanation_is_json_serializable():
 
         with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test-key"}):
             with tempfile.TemporaryDirectory() as tmpdir:
-                mem = MemorySystem(knowledge_path=tmpdir, use_chroma=False)
+                with patch("chromadb.PersistentClient"):
+                    mem = MemorySystem(knowledge_path=tmpdir)
 
                 id1 = mem.record("Test content", {"id": "TEST-001", "title": "Test"})
                 mem.encode(id1)

@@ -24,7 +24,8 @@ def test_retrieve_structured_returns_dicts():
 
         with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test-key"}):
             with tempfile.TemporaryDirectory() as tmpdir:
-                mem = MemorySystem(knowledge_path=tmpdir, use_chroma=False)
+                with patch("chromadb.PersistentClient"):
+                    mem = MemorySystem(knowledge_path=tmpdir)
 
                 # Create blocks
                 id1 = mem.record(
@@ -74,7 +75,8 @@ def test_retrieve_structured_json_serializable():
 
         with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test-key"}):
             with tempfile.TemporaryDirectory() as tmpdir:
-                mem = MemorySystem(knowledge_path=tmpdir, use_chroma=False)
+                with patch("chromadb.PersistentClient"):
+                    mem = MemorySystem(knowledge_path=tmpdir)
 
                 id1 = mem.record("Test content", {"id": "TEST-001", "title": "Test"})
                 mem.encode(id1)
@@ -104,7 +106,8 @@ def test_cli_json_output():
         with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test-key"}):
             with tempfile.TemporaryDirectory() as tmpdir:
                 # Set up memory system
-                mem = MemorySystem(knowledge_path=tmpdir, use_chroma=False)
+                with patch("chromadb.PersistentClient"):
+                    mem = MemorySystem(knowledge_path=tmpdir)
                 id1 = mem.record("Test content", {"id": "TEST-001", "title": "Test"})
                 mem.encode(id1)
 

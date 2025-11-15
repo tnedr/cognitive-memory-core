@@ -45,7 +45,8 @@ def test_hybrid_search_with_boost():
 
         with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test-key"}):
             with tempfile.TemporaryDirectory() as tmpdir:
-                mem = MemorySystem(knowledge_path=tmpdir, use_chroma=False)
+                with patch("chromadb.PersistentClient"):
+                    mem = MemorySystem(knowledge_path=tmpdir)
 
                 # Create blocks with specific content
                 id1 = mem.record(
@@ -80,7 +81,8 @@ def test_hybrid_search_with_exclude():
 
         with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test-key"}):
             with tempfile.TemporaryDirectory() as tmpdir:
-                mem = MemorySystem(knowledge_path=tmpdir, use_chroma=False)
+                with patch("chromadb.PersistentClient"):
+                    mem = MemorySystem(knowledge_path=tmpdir)
 
                 # Create blocks
                 id1 = mem.record("Test content about NAD", {"id": "TEST-001", "title": "Test Block"})
@@ -106,18 +108,24 @@ def test_cosine_similarity_in_search():
         mock_openai.return_value = mock_client
 
         with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test-key"}):
-            index = VectorIndex(use_chroma=False, use_openai=True)
+            # Mock ChromaDB
+            with patch("chromadb.PersistentClient") as mock_chroma:
+                # Mock collection and query
+                mock_collection = MagicMock()
+                test_embedding = [0.1] * 1536
+                mock_collection.query.return_value = {
+                    "ids": [["TEST-001"]],
+                    "embeddings": [[test_embedding]],
+                    "documents": [["test content"]],
+                }
+                mock_client = MagicMock()
+                mock_client.get_collection.side_effect = Exception("Not found")
+                mock_client.create_collection.return_value = mock_collection
+                mock_chroma.return_value = mock_client
 
-            # Mock FAISS index with known embeddings
-            from cmemory.vector.vector_index import FAISSIndex
-
-            index.faiss_index = FAISSIndex(dimension=1536)
-            test_embedding = [0.1] * 1536
-            index.faiss_index.add(["TEST-001"], [test_embedding])
-            index.faiss_index.embeddings_cache["TEST-001"] = test_embedding
-
-            # Search should return cosine similarity
-            results = index.similarity_search("test query", top_k=1)
+                index = VectorIndex()
+                # Search should return cosine similarity
+                results = index.similarity_search("test query", top_k=1)
 
             assert len(results) > 0
             # Cosine similarity should be in range [-1, 1]
@@ -137,7 +145,8 @@ def test_hybrid_score_ordering():
 
         with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test-key"}):
             with tempfile.TemporaryDirectory() as tmpdir:
-                mem = MemorySystem(knowledge_path=tmpdir, use_chroma=False)
+                with patch("chromadb.PersistentClient"):
+                    mem = MemorySystem(knowledge_path=tmpdir)
 
                 # Create blocks with different relevance
                 id1 = mem.record("NAD boosters are important", {"id": "NAD-001", "title": "NAD Guide"})

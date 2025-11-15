@@ -108,9 +108,19 @@ If ChromaDB is unavailable:
 2. **E2E tests**: Require Docker services running
    - Skip with: `SKIP_DOCKER_TESTS=1 pytest tests/test_e2e.py`
 
-## Using OpenAI Embeddings (Required)
+## Requirements
 
-OpenAI embeddings are **required** for semantic search. The system uses OpenAI's `text-embedding-3-small` model for high-quality, LLM-grade semantic understanding. There are no fallbacks - the system will fail clearly if OpenAI is not configured.
+### OpenAI Embeddings (Required)
+
+OpenAI embeddings are **required** for semantic search. The system uses OpenAI's `text-embedding-3-small` model for high-quality, LLM-grade semantic understanding. There are **no fallbacks** - the system will fail immediately if OpenAI is not configured.
+
+### ChromaDB (Required)
+
+ChromaDB is **required** for vector storage. FAISS and dummy vectors are no longer supported. The system will fail immediately if ChromaDB is not available.
+
+### Neo4j (Optional)
+
+Neo4j is **optional**. If unavailable, an in-memory graph will be used automatically. This allows reflection and autolink features to work without Neo4j installed or running.
 
 ### Setup
 

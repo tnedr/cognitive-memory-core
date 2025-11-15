@@ -21,7 +21,8 @@ def test_keyword_rank():
 
         with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test-key"}):
             with tempfile.TemporaryDirectory() as tmpdir:
-                mem = MemorySystem(knowledge_path=tmpdir, use_chroma=False)
+                with patch("chromadb.PersistentClient"):
+                    mem = MemorySystem(knowledge_path=tmpdir)
 
                 # Create blocks with different keyword relevance
                 id1 = mem.record(
@@ -78,7 +79,8 @@ def test_rrf_fuse():
             keyword_ranks = {"BLOCK-1": 2, "BLOCK-2": 1}
 
             with tempfile.TemporaryDirectory() as tmpdir:
-                mem = MemorySystem(knowledge_path=tmpdir, use_chroma=False)
+                with patch("chromadb.PersistentClient"):
+                    mem = MemorySystem(knowledge_path=tmpdir)
 
                 # Fuse rankings
                 fused = mem._rrf_fuse(semantic_results, keyword_ranks, k=60)
@@ -113,7 +115,8 @@ def test_retrieve_with_rrf():
 
         with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test-key"}):
             with tempfile.TemporaryDirectory() as tmpdir:
-                mem = MemorySystem(knowledge_path=tmpdir, use_chroma=False)
+                with patch("chromadb.PersistentClient"):
+                    mem = MemorySystem(knowledge_path=tmpdir)
 
                 # Create blocks with different characteristics
                 id1 = mem.record(
@@ -168,7 +171,8 @@ def test_rrf_scores_are_monotonic():
             keyword_ranks = {"BLOCK-1": 3, "BLOCK-2": 1, "BLOCK-3": 2}
 
             with tempfile.TemporaryDirectory() as tmpdir:
-                mem = MemorySystem(knowledge_path=tmpdir, use_chroma=False)
+                with patch("chromadb.PersistentClient"):
+                    mem = MemorySystem(knowledge_path=tmpdir)
 
                 fused = mem._rrf_fuse(semantic_results, keyword_ranks, k=60)
 
@@ -201,7 +205,8 @@ def test_rrf_with_missing_keyword_ranks():
             keyword_ranks = {"KEYWORD-ONLY": 1}
 
             with tempfile.TemporaryDirectory() as tmpdir:
-                mem = MemorySystem(knowledge_path=tmpdir, use_chroma=False)
+                with patch("chromadb.PersistentClient"):
+                    mem = MemorySystem(knowledge_path=tmpdir)
 
                 fused = mem._rrf_fuse(semantic_results, keyword_ranks, k=60)
 

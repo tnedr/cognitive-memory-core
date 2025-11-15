@@ -81,14 +81,16 @@ def test_vector_index_with_openai():
             mock_client.embeddings.create.return_value = mock_response
             mock_openai.return_value = mock_client
 
-            index = VectorIndex(use_chroma=False, use_openai=True)
-            assert index.openai_embedder is not None
-            assert index.openai_embedder.is_available()
-            assert index.embedding_dimension == 1536
+            # Mock ChromaDB
+            with patch("chromadb.PersistentClient"):
+                index = VectorIndex()
+                assert index.openai_embedder is not None
+                assert index.openai_embedder.is_available()
+                assert index.embedding_dimension == 1536
 
-            # Test embedding generation
-            embedding = index._get_embedding("test text")
-            assert len(embedding) == 1536
+                # Test embedding generation
+                embedding = index._get_embedding("test text")
+                assert len(embedding) == 1536
 
 
 def test_vector_index_openai_fails_raises_error():
@@ -100,15 +102,19 @@ def test_vector_index_openai_fails_raises_error():
             mock_client.embeddings.create.side_effect = Exception("API error")
             mock_openai.return_value = mock_client
 
-            index = VectorIndex(use_chroma=False, use_openai=True)
-            # Should raise RuntimeError when OpenAI fails
-            with pytest.raises(RuntimeError, match="Failed to generate OpenAI embedding"):
-                index._get_embedding("test text")
+            # Mock ChromaDB
+            with patch("chromadb.PersistentClient"):
+                index = VectorIndex()
+                # Should raise RuntimeError when OpenAI fails
+                with pytest.raises(RuntimeError, match="OpenAI embedding failed"):
+                    index._get_embedding("test text")
 
 
 def test_vector_index_no_openai_key_raises_error():
     """Test VectorIndex raises error when no OpenAI key is available."""
     with patch.dict(os.environ, {}, clear=True):
-        with pytest.raises(RuntimeError, match="OpenAI embeddings are required"):
-            VectorIndex(use_chroma=False, use_openai=True)
+        # Mock ChromaDB to avoid initialization error
+        with patch("chromadb.PersistentClient"):
+            with pytest.raises(RuntimeError, match="OpenAI embeddings are required"):
+                VectorIndex()
 

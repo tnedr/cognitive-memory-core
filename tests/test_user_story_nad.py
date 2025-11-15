@@ -18,12 +18,21 @@ from cmemory import MemorySystem
 @pytest.fixture
 def temp_memory():
     """Create a memory system with temporary storage."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        memory = MemorySystem(
-            knowledge_path=tmpdir,
-            use_chroma=False,  # Use FAISS fallback for tests
-        )
-        yield memory
+    import os
+    from unittest.mock import MagicMock, patch
+
+    with patch("openai.OpenAI") as mock_openai:
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.data = [MagicMock(embedding=[0.1] * 1536)]
+        mock_client.embeddings.create.return_value = mock_response
+        mock_openai.return_value = mock_client
+
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test-key"}, clear=False):
+            with tempfile.TemporaryDirectory() as tmpdir:
+                with patch("chromadb.PersistentClient"):
+                    memory = MemorySystem(knowledge_path=tmpdir)
+                    yield memory
 
 
 def test_nad_boosters_user_story(temp_memory):

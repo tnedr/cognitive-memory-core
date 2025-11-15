@@ -187,7 +187,7 @@ def memory_system(tmp_path: Path, docker_compose_up: None) -> MemorySystem:
         neo4j_uri="bolt://localhost:7687",
         neo4j_user="neo4j",
         neo4j_password="password",
-        use_chroma=True,
+        # ChromaDB is now mandatory
     )
 
 

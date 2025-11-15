@@ -22,7 +22,8 @@ def test_inflow_digest():
         file2 = inflow / "idea_nad.md"
         file2.write_text("# NAD Idea\nNMN boosts NAD levels.", encoding="utf-8")
 
-        memory = MemorySystem(knowledge_path=str(Path(tmpdir) / "knowledge"), use_chroma=False)
+        with patch("chromadb.PersistentClient"):
+            memory = MemorySystem(knowledge_path=str(Path(tmpdir) / "knowledge"))
 
         processor = InflowProcessor(inflow_path=str(inflow), memory=memory)
         ids = processor.digest()

@@ -277,7 +277,7 @@ def chroma_reset_cmd(ctx):
     memory = ctx.obj["memory"]
     from pathlib import Path
 
-    if memory.vector_index.use_chroma and memory.vector_index.client:
+    if memory.vector_index.client:
         try:
             collection_name = memory.vector_index.collection_name
             chroma_path = Path.cwd() / ".chroma"

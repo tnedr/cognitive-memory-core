@@ -29,7 +29,6 @@ class MemorySystem:
         neo4j_uri: Optional[str] = None,
         neo4j_user: Optional[str] = None,
         neo4j_password: Optional[str] = None,
-        use_chroma: bool = True,
         llm=None,
     ):
         """Initialize the memory system.
@@ -39,8 +38,10 @@ class MemorySystem:
             neo4j_uri: Neo4j connection URI.
             neo4j_user: Neo4j username.
             neo4j_password: Neo4j password.
-            use_chroma: Use ChromaDB for vector storage.
             llm: Optional LangChain chat model for reflection.
+
+        Raises:
+            RuntimeError: If OpenAI embeddings or ChromaDB are not available.
         """
         self.file_storage = FileStorage(base_path=knowledge_path)
         self.graph_storage = GraphStorage(
@@ -48,7 +49,8 @@ class MemorySystem:
             user=neo4j_user,
             password=neo4j_password,
         )
-        self.vector_index = VectorIndex(use_chroma=use_chroma)
+        # ChromaDB is now mandatory, use_chroma parameter is ignored
+        self.vector_index = VectorIndex()
         self.reflector = Reflector(llm=llm) if llm else None
         self.decay_manager = DecayManager(knowledge_path=knowledge_path)
 
@@ -609,28 +611,20 @@ class MemorySystem:
 
         logger.info(f"Starting reindex of {len(all_ids)} blocks")
 
-        # Step 2: Clear vector database
-        if self.vector_index.use_chroma and self.vector_index.collection:
-            try:
-                # Delete and recreate ChromaDB collection
-                self.vector_index.client.delete_collection(self.vector_index.collection_name)
-                self.vector_index.collection = self.vector_index.client.create_collection(
-                    self.vector_index.collection_name
-                )
-                logger.info("Cleared ChromaDB collection")
-            except Exception as e:
-                logger.error(f"Failed to reset ChromaDB: {e}")
-                # Fallback to FAISS
-                self.vector_index.use_chroma = False
-                from cmemory.vector.vector_index import FAISSIndex
+        # Step 2: Clear ChromaDB collection (required)
+        if not self.vector_index.collection:
+            raise RuntimeError("ChromaDB collection is not available")
 
-                self.vector_index.faiss_index = FAISSIndex(dimension=self.vector_index.embedding_dimension)
-        else:
-            # Reset FAISS index
-            from cmemory.vector.vector_index import FAISSIndex
-
-            self.vector_index.faiss_index = FAISSIndex(dimension=self.vector_index.embedding_dimension)
-            logger.info("Cleared FAISS index")
+        try:
+            # Delete and recreate ChromaDB collection
+            self.vector_index.client.delete_collection(self.vector_index.collection_name)
+            self.vector_index.collection = self.vector_index.client.create_collection(
+                self.vector_index.collection_name
+            )
+            logger.info("Cleared ChromaDB collection")
+        except Exception as e:
+            logger.error(f"Failed to reset ChromaDB: {e}")
+            raise RuntimeError(f"ChromaDB reset failed: {e}") from e
 
         # Step 3: Rebuild embeddings for all blocks
         count = 0
