@@ -42,6 +42,8 @@ Planned structure (per documentation framework):
 
 - `spec/api.md` – future HTTP/API surface
 
+- `remote_mobile_memory_spec.md` – Remote + Mobile Accessible Memory System specification
+
 _(These spec files can be created incrementally as the project stabilises in each area.)_
 
 ## AI-Facing Documentation

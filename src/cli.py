@@ -152,6 +152,25 @@ def list_blocks(ctx):
             click.echo(f"  • {block_id}: {block.title}")
 
 
+@cli.command()
+@click.option("--inflow-path", default="inflow", help="Path to inflow directory")
+@click.pass_context
+def digest_inflow(ctx, inflow_path):
+    """Digest all files in the inflow directory into memory."""
+    from cmemory.inflow import InflowProcessor
+
+    memory = ctx.obj["memory"]
+    processor = InflowProcessor(inflow_path=inflow_path, memory=memory)
+    results = processor.digest()
+
+    if results:
+        click.echo("Processed files into KnowledgeBlocks:")
+        for rid in results:
+            click.echo(f"  • {rid}")
+    else:
+        click.echo("No files found in inflow directory.")
+
+
 if __name__ == "__main__":
     cli()
 
