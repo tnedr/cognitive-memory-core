@@ -77,7 +77,9 @@ class GraphStorage:
                     session.run("RETURN 1")
                 logger.info("Connected to Neo4j")
             except Exception as e:
-                logger.warning(f"Neo4j connection failed, using fallback: {e}")
+                # Only log at DEBUG level to reduce noise when Neo4j is not available
+                # The system will work fine with in-memory fallback
+                logger.debug(f"Neo4j connection failed, using fallback: {e}")
                 self.use_fallback = True
 
     def _is_using_fallback(self) -> bool:

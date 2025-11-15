@@ -301,6 +301,9 @@ class VectorIndex:
                                 block_id=block_id,
                                 score=float(score),
                                 content=content,
+                                semantic_score=float(score),
+                                keyword_score=0.0,
+                                explanation={"semantic": float(score)},
                             )
                         )
                 # Sort by score descending and return top_k
@@ -325,6 +328,9 @@ class VectorIndex:
                             block_id=block_id,
                             score=float(score),
                             content="",
+                            semantic_score=float(score),
+                            keyword_score=0.0,
+                            explanation={"semantic": float(score)},
                         )
                     )
             search_results.sort(key=lambda x: x.score, reverse=True)

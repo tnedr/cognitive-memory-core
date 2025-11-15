@@ -76,4 +76,7 @@ class SearchResult:
     score: float
     content: str
     metadata: Dict[str, Any] = field(default_factory=dict)
+    semantic_score: float = 0.0
+    keyword_score: float = 0.0
+    explanation: Dict[str, Any] = field(default_factory=dict)
 

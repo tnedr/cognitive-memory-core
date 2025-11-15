@@ -2,7 +2,7 @@
 
 import logging
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 try:
     from typing import Literal
@@ -149,13 +149,121 @@ class MemorySystem:
         self.graph_storage.add_relationship(relationship)
         logger.info(f"Linked {src_id} --[{rel}]--> {dst_id}")
 
+    def _keyword_rank(self, query: str, candidate_ids: List[str]) -> Dict[str, int]:
+        """Rank candidate blocks by keyword match in title and content.
+
+        Args:
+            query: Search query text.
+            candidate_ids: List of block IDs to rank.
+
+        Returns:
+            Dictionary mapping block_id to rank (1 = best, higher = worse).
+        """
+        query_tokens = set(query.lower().split())
+        scored_blocks = []
+
+        for block_id in candidate_ids:
+            block = self.file_storage.read(block_id)
+            if not block:
+                continue
+
+            title_lower = block.title.lower()
+            content_lower = block.content.lower()
+            score = 0
+
+            for token in query_tokens:
+                if token in title_lower:
+                    score += 2  # Title matches are more important
+                if token in content_lower:
+                    score += 1
+
+            if score > 0:
+                scored_blocks.append((block_id, score))
+
+        # Sort by score descending, then assign ranks
+        scored_blocks.sort(key=lambda x: x[1], reverse=True)
+        keyword_ranks = {}
+        for rank, (block_id, _) in enumerate(scored_blocks, start=1):
+            keyword_ranks[block_id] = rank
+
+        return keyword_ranks
+
+    def _rrf_fuse(
+        self,
+        semantic_results: List[SearchResult],
+        keyword_ranks: Dict[str, int],
+        k: int = 60,
+    ) -> List[SearchResult]:
+        """Apply Reciprocal Rank Fusion to combine semantic and keyword rankings.
+
+        Args:
+            semantic_results: List of SearchResult objects from semantic search.
+            keyword_ranks: Dictionary mapping block_id to keyword rank (1 = best).
+            k: RRF constant (default 60, common in IR literature).
+
+        Returns:
+            List of SearchResult objects with RRF scores, sorted by score descending.
+        """
+        # Build semantic rank map (1 = best)
+        semantic_ranks = {}
+        for rank, result in enumerate(semantic_results, start=1):
+            semantic_ranks[result.block_id] = rank
+
+        # Get all unique block IDs
+        all_block_ids = set(semantic_ranks.keys()) | set(keyword_ranks.keys())
+
+        # Compute RRF scores
+        fused_results = []
+        for block_id in all_block_ids:
+            rrf_score = 0.0
+
+            # Add semantic contribution
+            if block_id in semantic_ranks:
+                sem_rank = semantic_ranks[block_id]
+                rrf_score += 1.0 / (k + sem_rank)
+
+            # Add keyword contribution
+            if block_id in keyword_ranks:
+                kw_rank = keyword_ranks[block_id]
+                rrf_score += 1.0 / (k + kw_rank)
+
+            # Find original SearchResult to preserve metadata
+            original_result = next(
+                (r for r in semantic_results if r.block_id == block_id),
+                None,
+            )
+            if original_result:
+                # Create new SearchResult with RRF score
+                fused_result = SearchResult(
+                    block_id=block_id,
+                    score=rrf_score,
+                    content=original_result.content,
+                    metadata=original_result.metadata,
+                    semantic_score=original_result.semantic_score,
+                    keyword_score=original_result.keyword_score,
+                    explanation={
+                        **original_result.explanation,
+                        "rrf_score": rrf_score,
+                        "semantic_rank": semantic_ranks.get(block_id),
+                        "keyword_rank": keyword_ranks.get(block_id),
+                    },
+                )
+                fused_results.append(fused_result)
+
+        # Sort by RRF score descending
+        fused_results.sort(key=lambda x: x.score, reverse=True)
+        return fused_results
+
     def retrieve(
         self,
         query: str,
         top_k: int = 5,
         boost: Optional[List[str]] = None,
         exclude: Optional[List[str]] = None,
-    ) -> List[str]:
+        explain: bool = False,
+        use_rrf: bool = False,
+        rrf_k: int = 60,
+    ) -> List[SearchResult]:
         """Retrieve relevant knowledge blocks for a query with hybrid scoring.
 
         Args:
@@ -163,12 +271,23 @@ class MemorySystem:
             top_k: Number of results to return.
             boost: Optional list of keywords to boost scores (title: +0.2, content: +0.1).
             exclude: Optional list of keywords to exclude from results.
+            explain: If True, return SearchResult objects with detailed explanations.
+            use_rrf: If True, use Reciprocal Rank Fusion to combine semantic and keyword rankings.
+            rrf_k: RRF constant (default 60).
 
         Returns:
-            List of block IDs ordered by hybrid relevance score.
+            List of SearchResult objects (if explain=True) or block IDs (if explain=False, for backwards compatibility).
         """
         # Get semantic search results with cosine similarity
-        results = self.vector_index.similarity_search(query, top_k=top_k * 2 if boost or exclude else top_k)
+        # For RRF, we need more candidates to get good fusion
+        semantic_top_k = top_k * 3 if use_rrf else (top_k * 2 if boost or exclude else top_k)
+        results = self.vector_index.similarity_search(query, top_k=semantic_top_k)
+
+        # Apply RRF fusion if enabled
+        if use_rrf:
+            candidate_ids = [r.block_id for r in results]
+            keyword_ranks = self._keyword_rank(query, candidate_ids)
+            results = self._rrf_fuse(results, keyword_ranks, k=rrf_k)
 
         # Apply hybrid scoring (semantic + keyword boosting)
         scored_results = []
@@ -178,7 +297,12 @@ class MemorySystem:
                 continue
 
             # Start with cosine similarity score
-            hybrid_score = result.score
+            semantic_score = result.semantic_score if hasattr(result, 'semantic_score') else result.score
+            hybrid_score = semantic_score
+            keyword_score = 0.0
+            explanation = result.explanation.copy() if hasattr(result, 'explanation') else {"semantic": semantic_score}
+            title_matches = []
+            content_matches = []
 
             # Apply keyword boosting
             if boost:
@@ -189,8 +313,19 @@ class MemorySystem:
                 for keyword in boost_lower:
                     if keyword in title_lower:
                         hybrid_score += 0.2
+                        keyword_score += 0.2
+                        title_matches.append(keyword)
                     if keyword in content_lower:
                         hybrid_score += 0.1
+                        keyword_score += 0.1
+                        content_matches.append(keyword)
+
+            # Update explanation
+            if title_matches:
+                explanation["title_match"] = title_matches
+            if content_matches:
+                explanation["content_match"] = content_matches
+            explanation["keyword_score"] = keyword_score
 
             # Apply exclusion filter
             if exclude:
@@ -199,27 +334,90 @@ class MemorySystem:
                 content_lower = block.content.lower()
 
                 should_exclude = False
+                excluded_keywords = []
                 for keyword in exclude_lower:
                     if keyword in title_lower or keyword in content_lower:
                         should_exclude = True
-                        break
+                        excluded_keywords.append(keyword)
 
                 if should_exclude:
-                    continue
+                    explanation["excluded"] = excluded_keywords
+                    if not explain:
+                        continue  # Skip in non-explain mode
+                    # In explain mode, mark as excluded but still include
+                    explanation["filtered"] = True
 
-            scored_results.append((result.block_id, hybrid_score, block))
+            if explain:
+                scored_results.append(
+                    SearchResult(
+                        block_id=result.block_id,
+                        score=hybrid_score,
+                        content=result.content,
+                        semantic_score=semantic_score,
+                        keyword_score=keyword_score,
+                        explanation=explanation,
+                    )
+                )
+            else:
+                scored_results.append((result.block_id, hybrid_score, block))
 
         # Sort by hybrid score (descending)
-        scored_results.sort(key=lambda x: x[1], reverse=True)
-
-        # Return top_k block IDs
-        block_ids = [block_id for block_id, _, _ in scored_results[:top_k]]
+        # Note: If RRF was used, results are already sorted
+        if use_rrf:
+            # RRF already sorted, just take top_k
+            final_results = results[:top_k]
+            if not explain:
+                # Convert to block IDs for backwards compatibility
+                final_results = [r.block_id for r in final_results]
+        elif explain:
+            scored_results.sort(key=lambda x: x.score, reverse=True)
+            final_results = scored_results[:top_k]
+        else:
+            scored_results.sort(key=lambda x: x[1], reverse=True)
+            final_results = [block_id for block_id, _, _ in scored_results[:top_k]]
 
         # Record access for retrieved blocks
+        block_ids = [r.block_id if explain else r for r in final_results]
         for block_id in block_ids:
             self.decay_manager.record_access(block_id, self.file_storage)
 
-        return block_ids
+        return final_results
+
+    def retrieve_structured(
+        self,
+        query: str,
+        top_k: int = 5,
+        explain: bool = True,
+        boost: Optional[List[str]] = None,
+        exclude: Optional[List[str]] = None,
+    ) -> List[Dict[str, Any]]:
+        """Return structured retrieval results suitable for agents (JSON-friendly).
+
+        Args:
+            query: Search query text.
+            top_k: Number of results to return.
+            explain: Include detailed explanations.
+            boost: Optional list of keywords to boost scores.
+            exclude: Optional list of keywords to exclude from results.
+
+        Returns:
+            List of dictionaries with structured retrieval information.
+        """
+        results = self.retrieve(query, top_k=top_k, explain=explain, boost=boost, exclude=exclude)
+        structured = []
+        for r in results:
+            block = self.file_storage.read(r.block_id)
+            structured.append({
+                "block_id": r.block_id,
+                "title": block.title if block else r.block_id,
+                "tags": block.tags if block else [],
+                "information_type": getattr(block, "information_type", None),
+                "semantic_score": getattr(r, "semantic_score", r.score),
+                "keyword_score": getattr(r, "keyword_score", 0.0),
+                "final_score": r.score,
+                "explanation": getattr(r, "explanation", {}),
+            })
+        return structured
 
     def reflect(self, block_id: str) -> None:
         """Reflect on a knowledge block to generate insights or summaries.

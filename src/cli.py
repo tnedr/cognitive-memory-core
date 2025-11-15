@@ -119,8 +119,12 @@ def context(ctx, goal, max_tokens, output):
 @click.option("--top-k", default=5, help="Number of results to return")
 @click.option("--boost", multiple=True, help="Keywords to boost (can be used multiple times)")
 @click.option("--exclude", multiple=True, help="Keywords to exclude (can be used multiple times)")
+@click.option("--explain", is_flag=True, help="Show detailed retrieval explanations")
+@click.option("--json-output", is_flag=True, help="Return results as JSON for agents")
+@click.option("--use-rrf", is_flag=True, help="Use Reciprocal Rank Fusion to combine semantic and keyword rankings")
+@click.option("--rrf-k", default=60, help="RRF constant (default: 60)")
 @click.pass_context
-def search(ctx, query, top_k, boost, exclude):
+def search(ctx, query, top_k, boost, exclude, explain, json_output, use_rrf, rrf_k):
     """Search for knowledge blocks with hybrid scoring (semantic + keyword boosting)."""
     memory = ctx.obj["memory"]
 
@@ -128,6 +132,49 @@ def search(ctx, query, top_k, boost, exclude):
     boost_list = list(boost) if boost else None
     exclude_list = list(exclude) if exclude else None
 
+    # If JSON output or explain mode, use retrieve with explain=True
+    if json_output or explain:
+        results = memory.retrieve(
+            query,
+            top_k=top_k,
+            boost=boost_list,
+            exclude=exclude_list,
+            explain=True,
+            use_rrf=use_rrf,
+            rrf_k=rrf_k,
+        )
+        
+        if json_output:
+            # Return structured JSON output
+            structured = memory.retrieve_structured(
+                query,
+                top_k=top_k,
+                explain=True,
+                boost=boost_list,
+                exclude=exclude_list,
+            )
+            import json
+            click.echo(json.dumps(structured, indent=2, ensure_ascii=False))
+            return
+        
+        # Explain mode - show detailed output
+        if not results:
+            click.echo("No results found")
+            return
+        
+        click.echo(f"Found {len(results)} results:\n")
+        for i, result in enumerate(results, 1):
+            block = memory.file_storage.read(result.block_id)
+            title = block.title if block else result.block_id
+            click.echo(f"{i}. [{result.block_id}] {title}")
+            click.echo(f"   semantic_score: {result.semantic_score:.3f}")
+            click.echo(f"   keyword_score: {result.keyword_score:.3f}")
+            click.echo(f"   final_score: {result.score:.3f}")
+            click.echo(f"   explanation: {result.explanation}")
+            click.echo()
+        return
+
+    # Standard mode - backwards compatible
     if boost_list or exclude_list:
         # Use hybrid retrieval
         block_ids = memory.retrieve(query, top_k=top_k, boost=boost_list, exclude=exclude_list)

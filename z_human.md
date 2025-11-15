@@ -16,8 +16,22 @@ uv run cmemory list-blocks
 uv run cmemory reindex-all
 uv run cmemory search "nad"
 
+## search
+három mód van a kereséshez (alap, explain, JSON)
 
+uv run cmemory search "nad"
+uv run cmemory search "nad" --explain
+uv run cmemory search "nad" --json-output
+uv run cmemory search "nad boosters" --use-rrf --explain
 
+# Explain + RRF
+uv run cmemory search "nad" --use-rrf --explain
+
+# JSON + RRF
+uv run cmemory search "nad" --use-rrf --json-output
+
+# Boost + Explain + RRF
+uv run cmemory search "nad" --boost nad --use-rrf --explain
 
 # embedding
 30-80 ms pre block
