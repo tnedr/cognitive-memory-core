@@ -30,14 +30,14 @@ The knowledge blocks are located in `stories/nad_boosters/`:
 ### Step 1: Ingest Initial Knowledge Blocks
 
 ```bash
-uv run python -m src.cli ingest stories/nad_boosters/nad_001_resveratrol.md
-uv run python -m src.cli ingest stories/nad_boosters/nad_002_nmn.md
+uv run cmemory ingest stories/nad_boosters/nad_001_resveratrol.md
+uv run cmemory ingest stories/nad_boosters/nad_002_nmn.md
 ```
 
 Verify ingestion:
 
 ```bash
-uv run python -m src.cli list-blocks
+uv run cmemory list-blocks
 ```
 
 You should see: `NAD-001`, `NAD-002`.
@@ -47,7 +47,7 @@ You should see: `NAD-001`, `NAD-002`.
 Search for NAD boosters:
 
 ```bash
-uv run python -m src.cli search "What boosts NAD levels?"
+uv run cmemory search "What boosts NAD levels?"
 ```
 
 Expected results:
@@ -57,7 +57,7 @@ Expected results:
 Try context materialization:
 
 ```bash
-uv run python -m src.cli context "Explain NAD boosting supplements"
+uv run cmemory context "Explain NAD boosting supplements"
 ```
 
 ### Step 3: Add New Knowledge
@@ -65,7 +65,7 @@ uv run python -m src.cli context "Explain NAD boosting supplements"
 Ingest the third block:
 
 ```bash
-uv run python -m src.cli ingest stories/nad_boosters/nad_003_tmg.md
+uv run cmemory ingest stories/nad_boosters/nad_003_tmg.md
 ```
 
 ### Step 4: Enhanced Retrieval
@@ -73,7 +73,7 @@ uv run python -m src.cli ingest stories/nad_boosters/nad_003_tmg.md
 Search again with a broader query:
 
 ```bash
-uv run python -m src.cli search "How to support NAD metabolism?"
+uv run cmemory search "How to support NAD metabolism?"
 ```
 
 Expected results (should now include TMG):
@@ -84,7 +84,7 @@ Expected results (should now include TMG):
 Try context with the new information:
 
 ```bash
-uv run python -m src.cli context "Explain how NAD precursors and methyl donors work together"
+uv run cmemory context "Explain how NAD precursors and methyl donors work together"
 ```
 
 This will now automatically include TMG in the context.

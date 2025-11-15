@@ -8,17 +8,17 @@ A simple, runnable demonstration of the cognitive-memory-core system.
 
 ```bash
 # Ingest initial blocks
-uv run python -m src.cli ingest nad_001_resveratrol.md
-uv run python -m src.cli ingest nad_002_nmn.md
+uv run cmemory ingest nad_001_resveratrol.md
+uv run cmemory ingest nad_002_nmn.md
 
 # Search
-uv run python -m src.cli search "What boosts NAD levels?"
+uv run cmemory search "What boosts NAD levels?"
 
 # Add new block
-uv run python -m src.cli ingest nad_003_tmg.md
+uv run cmemory ingest nad_003_tmg.md
 
 # Search again
-uv run python -m src.cli search "How to support NAD metabolism?"
+uv run cmemory search "How to support NAD metabolism?"
 ```
 
 ### Option 2: Python Script

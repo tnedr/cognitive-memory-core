@@ -65,13 +65,13 @@ uv run pytest tests/test_e2e.py -v -m e2e
 
 ```bash
 # Ingest a knowledge block
-uv run python -m src.cli ingest knowledge/2025-11-06-memory-design.md
+uv run cmemory ingest knowledge/2025-11-06-memory-design.md
 
 # Search for blocks
-uv run python -m src.cli search "memory system"
+uv run cmemory search "memory system"
 
 # Materialize context
-uv run python -m src.cli context "Explain hybrid memory architecture"
+uv run cmemory context "Explain hybrid memory architecture"
 ```
 
 ## Troubleshooting
@@ -108,8 +108,57 @@ If ChromaDB is unavailable:
 2. **E2E tests**: Require Docker services running
    - Skip with: `SKIP_DOCKER_TESTS=1 pytest tests/test_e2e.py`
 
+## Using OpenAI Embeddings (Recommended)
+
+For high-quality semantic search, use OpenAI embeddings instead of local models. This avoids dependency conflicts and provides LLM-grade semantic understanding.
+
+### Setup
+
+1. **Create `.env` file** in the project root:
+   ```bash
+   OPENAI_API_KEY=sk-your-key-here
+   ```
+
+2. **Install OpenAI package** (if not already installed):
+   ```bash
+   uv pip install openai
+   ```
+
+3. **That's it!** The system will automatically:
+   - Detect the `OPENAI_API_KEY` environment variable
+   - Use OpenAI `text-embedding-3-small` model (1536 dimensions)
+   - Fall back to sentence-transformers or dummy embeddings if unavailable
+
+### Benefits
+
+- **No dependency conflicts**: Bypasses sentence-transformers version issues
+- **High-quality embeddings**: LLM-grade semantic understanding
+- **Fast and reliable**: OpenAI API is production-ready
+- **Automatic fallback**: Works even if API key is missing
+
+### Verification
+
+After setting up, test semantic search:
+
+```bash
+# Ingest some blocks
+uv run cmemory ingest knowledge/your-file.md
+
+# Search (should now return intelligent results)
+uv run cmemory search "your query"
+```
+
+You should see real semantic matches instead of "No results found".
+
+### Cost
+
+OpenAI embeddings are very affordable:
+- `text-embedding-3-small`: ~$0.02 per 1M tokens
+- Typical usage: < $1/month for personal knowledge base
+
 ## Environment Variables
 
+- `OPENAI_API_KEY`: OpenAI API key for embeddings (recommended)
 - `SKIP_DOCKER_TESTS=1`: Skip Docker-dependent tests
 - `UV_CACHE_DIR`: Override UV cache location (default: `E:\uv-cache`)
 

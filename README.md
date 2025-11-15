@@ -72,35 +72,35 @@ This will start:
 
 ```bash
 # Using UV (recommended)
-uv run python -m src.cli ingest knowledge/2025-11-06-memory-design.md
+uv run cmemory ingest knowledge/2025-11-06-memory-design.md
 
 # Or activate venv first
 .venv\Scripts\activate  # Windows
-python -m src.cli ingest knowledge/2025-11-06-memory-design.md
+cmemory ingest knowledge/2025-11-06-memory-design.md
 ```
 
 #### Auto-link related blocks
 
 ```bash
-uv run python -m src.cli autolink KB-20251106-001
+uv run cmemory autolink KB-20251106-001
 ```
 
 #### Materialize context for a goal
 
 ```bash
-uv run python -m src.cli context "Explain hybrid memory architecture"
+uv run cmemory context "Explain hybrid memory architecture"
 ```
 
 #### Search for knowledge blocks
 
 ```bash
-uv run python -m src.cli search "memory system" --top-k 5
+uv run cmemory search "memory system" --top-k 5
 ```
 
 #### List all blocks
 
 ```bash
-uv run python -m src.cli list-blocks
+uv run cmemory list-blocks
 ```
 
 ### Python API
@@ -173,7 +173,7 @@ This project uses UV for efficient package management with a global cache:
 uv pip install -e .
 
 # Run commands
-uv run python -m src.cli --help
+uv run cmemory --help
 uv run pytest tests/
 
 # Check cache location

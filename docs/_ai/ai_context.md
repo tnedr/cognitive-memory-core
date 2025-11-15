@@ -58,7 +58,7 @@ The system is orchestrated by `MemorySystem` class (`src/cmemory/memory.py`), wh
 ### For AI Agents
 
 - Use `MemorySystem` class directly in Python code
-- CLI available for scripting: `uv run python -m src.cli`
+- CLI available for scripting: `uv run cmemory` (or `cmemory` if installed)
 - Future: REST/GraphQL API (v0.4.0 planned)
 
 ### Dependencies

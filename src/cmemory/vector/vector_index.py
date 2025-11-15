@@ -96,13 +96,15 @@ class VectorIndex:
         collection_name: str = "knowledge_blocks",
         use_chroma: bool = True,
         embedding_model: str = "all-MiniLM-L6-v2",
+        use_openai: bool = True,
     ):
         """Initialize vector index.
 
         Args:
             collection_name: Name of the ChromaDB collection.
             use_chroma: Use ChromaDB if available, otherwise FAISS.
-            embedding_model: Name of the sentence transformer model.
+            embedding_model: Name of the sentence transformer model (used if OpenAI not available).
+            use_openai: Use OpenAI embeddings if API key is available (default: True).
         """
         self.collection_name = collection_name
         self.use_chroma = use_chroma
@@ -110,15 +112,36 @@ class VectorIndex:
         self.collection = None
         self.faiss_index = None
         self.embedder = None
+        self.openai_embedder = None
+        self.embedding_dimension = 384  # Default for sentence-transformers
 
-        # Initialize embedder
-        try:
-            from sentence_transformers import SentenceTransformer
+        # Initialize OpenAI embedder (highest priority)
+        if use_openai:
+            try:
+                from cmemory.vector.openai_embedder import OpenAIEmbedder
 
-            self.embedder = SentenceTransformer(embedding_model)
-            logger.info(f"Loaded embedding model: {embedding_model}")
-        except ImportError:
-            logger.warning("sentence-transformers not available, embeddings will be dummy")
+                self.openai_embedder = OpenAIEmbedder()
+                if self.openai_embedder.is_available():
+                    self.embedding_dimension = self.openai_embedder.dimension
+                    logger.info("Using OpenAI embeddings for semantic search")
+                else:
+                    self.openai_embedder = None
+            except Exception as e:
+                logger.debug(f"OpenAI embedder not available: {e}")
+                self.openai_embedder = None
+
+        # Initialize sentence-transformers embedder (fallback)
+        if self.openai_embedder is None:
+            try:
+                from sentence_transformers import SentenceTransformer
+
+                self.embedder = SentenceTransformer(embedding_model)
+                self.embedding_dimension = self.embedder.get_sentence_embedding_dimension()
+                logger.info(f"Loaded embedding model: {embedding_model}")
+            except ImportError:
+                logger.warning("sentence-transformers not available, embeddings will be dummy")
+            except Exception as e:
+                logger.warning(f"Failed to load sentence-transformers: {e}")
 
         # Initialize vector store
         if use_chroma:
@@ -137,11 +160,13 @@ class VectorIndex:
                 self.use_chroma = False
 
         if not self.use_chroma:
-            self.faiss_index = FAISSIndex()
-            logger.info("Using FAISS for vector storage")
+            self.faiss_index = FAISSIndex(dimension=self.embedding_dimension)
+            logger.info(f"Using FAISS for vector storage (dim={self.embedding_dimension})")
 
     def _get_embedding(self, text: str) -> List[float]:
         """Get embedding for text.
+
+        Priority: OpenAI > sentence-transformers > dummy
 
         Args:
             text: Text to embed.
@@ -149,10 +174,23 @@ class VectorIndex:
         Returns:
             Embedding vector.
         """
-        if self.embedder is None:
-            # Dummy embedding for testing
-            return [0.0] * 384
-        return self.embedder.encode(text, show_progress_bar=False).tolist()
+        # Try OpenAI first (highest quality)
+        if self.openai_embedder and self.openai_embedder.is_available():
+            try:
+                return self.openai_embedder.embed_text(text)
+            except Exception as e:
+                logger.warning(f"OpenAI embedding failed, falling back: {e}")
+
+        # Fallback to sentence-transformers
+        if self.embedder is not None:
+            try:
+                return self.embedder.encode(text, show_progress_bar=False).tolist()
+            except Exception as e:
+                logger.warning(f"Sentence-transformer embedding failed: {e}")
+
+        # Last resort: dummy embedding
+        logger.debug("Using dummy embedding (no embedder available)")
+        return [0.0] * self.embedding_dimension
 
     def add_embeddings(self, block_ids: List[str], texts: List[str]) -> None:
         """Add embeddings for knowledge blocks.
@@ -174,11 +212,12 @@ class VectorIndex:
                 logger.error(f"Failed to add to ChromaDB: {e}")
                 # Fallback to FAISS
                 self.use_chroma = False
-                self.faiss_index = FAISSIndex(dimension=len(embeddings[0]) if embeddings else 384)
+                dimension = len(embeddings[0]) if embeddings else self.embedding_dimension
+                self.faiss_index = FAISSIndex(dimension=dimension)
                 self.faiss_index.add(block_ids, embeddings)
         else:
             if self.faiss_index is None:
-                dimension = len(embeddings[0]) if embeddings else 384
+                dimension = len(embeddings[0]) if embeddings else self.embedding_dimension
                 self.faiss_index = FAISSIndex(dimension=dimension)
             self.faiss_index.add(block_ids, embeddings)
 

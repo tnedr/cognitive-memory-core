@@ -12,29 +12,46 @@ cd E:\Repos\ai_human_collab
 
 uv pip install -e E:\Repos\cognitive-memory-core
 
-# Now it works
-
-uv run cmemory --help
-uv run python -m src.cli digest-inflow
-
-
 
 ## How to Run / Test
 
-# Create files in inflow/
-echo "My note" > inflow/my_note.txt
+uv run cmemory --help
+uv run cmemory digest-inflow
+uv run cmemory list-blocks
+uv run cmemory search "nad"
 
-# Digest them
-uv run python -m src.cli digest-inflow
+## Note on Search Results
 
-# List blocks
-uv run python -m src.cli list-blocks
+If search returns "No results found", it's likely because:
+- `sentence-transformers` is not installed (using dummy embeddings)
+- Existing blocks were encoded before installing sentence-transformers
 
-# Search for content
-uv run python -m src.cli search "your query"
+**Fix:** Install sentence-transformers and re-encode blocks:
+```bash
+uv pip install sentence-transformers
+# Then re-ingest or re-encode your blocks
+```
 
+See `docs/TROUBLESHOOTING.md` for more details.
 
+---
 
+## Next Steps / Functional Extensions
+
+**Current Status:** Core workflow is working (inflow → digest → storage → retrieval)
+
+**Suggested Extensions:**
+
+1. **Auto-re-encoding on file changes** - Watchdog integration for automatic updates
+2. **Batch operations** - Process multiple files, bulk re-encode
+3. **Search filters** - Filter by tags, information_type, date ranges
+4. **Export/Import** - Backup and restore knowledge blocks
+5. **Graph visualization** - Show relationships between blocks
+6. **API layer** - REST/GraphQL API for remote access (see `docs/_project/remote_mobile_memory_spec.md`)
+7. **Advanced retrieval** - Hybrid search (semantic + keyword + graph)
+8. **Metadata enrichment** - Auto-extract tags, entities, summaries
+
+**When ready, let me know what you'd like to extend next!**
 
 
 
@@ -61,16 +78,16 @@ uv run python -m src.cli search "your query"
 
   ```bash
   # Ingest a knowledge block
-  uv run python -m src.cli ingest knowledge/2025-11-06-memory-design.md
+  uv run cmemory ingest knowledge/2025-11-06-memory-design.md
 
   # List all blocks
-  uv run python -m src.cli list-blocks
+  uv run cmemory list-blocks
 
   # Search
-  uv run python -m src.cli search "memory system"
+  uv run cmemory search "memory system"
 
   # Materialize context
-  uv run python -m src.cli context "Explain hybrid memory architecture"
+  uv run cmemory context "Explain hybrid memory architecture"
   ```
 
 ---
